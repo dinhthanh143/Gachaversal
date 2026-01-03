@@ -94,10 +94,10 @@ const ye = {
     icon: "<:ye_skill:1446822377101983787>",
     name: "Sword Of The Divine [PASSIVE]",
     description:
-      "When attacking, if Speed is lower than the target’s, gains {0}% lifesteal; otherwise, gains +{1}% ATK \nand +{2}% Crit Rate.",
+      "When attacking, if Speed is lower than the target’s, gains {0}% lifesteal and +{1}% ATK ; otherwise, gains +{1}% ATK \nand +{2}% Crit Rate.",
     values: [
-      [20, 24, 28, 32, 36, 40], // Lifesteal %
-      [10, 14, 18, 22, 26, 30], // ATK %
+      [17, 22, 29, 36, 43, 50], // Lifesteal %
+      [10, 14, 20, 25, 30, 35], // ATK %
       [8, 10, 12, 14, 16, 18], // Crit Rate %
     ],
   },
@@ -134,7 +134,7 @@ const miyabi = {
   name: "Hoshimi Miyabi",
   franchise: "Zenless Zone Zero",
   type: "Ice ❄️",
-  stats: { atk: 77, hp: 65, speed: 89, def: 49 },
+  stats: { atk: 81, hp: 66, speed: 89, def: 55 },
   skill: {
     icon: "<:miyabi_skill:1447562052771123323>",
     name: "Judgement Cut",
@@ -261,7 +261,7 @@ const herta = {
       "Randomly sets the enemy’s Energy to 0–100%; if the new value is lower, Herta takes damage equal to {0}% of her Max HP based on the Energy lost, otherwise the enemy is marked with **Interpretation** and takes {1}% of Herta’s Max HP as Ice damage based on the Energy gained when they next act.",
     values: [
       [0.45, 0.4, 0.35, 0.3, 0.28, 0.25],
-      [0.6, 0.7, 0.8, 0.9, 0.1, 1.1],
+      [0.6, 0.8, 1, 1.2, 1.4, 1.6],
     ],
   },
   image:
@@ -269,6 +269,255 @@ const herta = {
   cardColor: "#7f0dd6",
 };
 
+const acheron = {
+  pokeId: 14,
+  name: "Acheron",
+  franchise: "Honkai Star Rail",
+  type: "Electric ⚡",
+  stats: {
+    atk: 78,
+    hp: 69,
+    speed: 84,
+    def: 60,
+  },
+  skill: {
+    icon: "<:acheron_skill:1456918056013135990>",
+    name: "Crimson Verdict [PASSIVE]",
+    description:
+      "Each time Acheron attacks, she applies 1 stack of Slashed Dream; at 4 stacks, all stacks are consumed to unleash a Crimson Slash that deals {0}% ATK damage per stack and is guaranteed to Crit.",
+    values: [[15, 20, 25, 30, 35, 40]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767422326/ed11f7eab53c677090f341de3af11da5_qm7prz.jpg",
+  cardColor: "#460996",
+};
+
+const phainon = {
+  pokeId: 15,
+  name: "Phainon",
+  franchise: "Honkai Star Rail",
+  type: "Light ☀️",
+  stats: {
+    atk: 68,
+    hp: 90,
+    speed: 70,
+    def: 52,
+  },
+  skill: {
+    icon: "<:phainon_skill:1456918929531474001>",
+    name: "Echo of Calamity",
+    description:
+      "For the next 3 turns, whenever Phainon takes damage, he stores {0}% of the damage received. When the duration ends, he retaliates against the target, dealing Light damage.",
+    values: [[45, 50, 55, 60, 65, 70]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767422348/02b96ba754da2755c5691703772980de_udasvi.jpg",
+  cardColor: "#e6cd17",
+};
+
+const raiden = {
+  pokeId: 16,
+  name: "Raiden Shogun",
+  franchise: "Genshin Impact",
+  type: "Electric ⚡",
+  stats: {
+    atk: 82,
+    hp: 74,
+    speed: 86,
+    def: 54,
+  },
+  skill: {
+    icon: "<:raiden_skill:1456922691411120170>",
+    name: "Eternal Execution",
+    description:
+      "When Raiden uses her Skill, instead of fully depleting Energy, she consumes between 25-100% of her current Energy and channels it into a devastating strike. Deals Electro DMG equal to {0}% of ATK for each 1% Energy consumed.",
+    values: [[1, 1.2, 1.4, 1.6, 1.8, 2]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767423122/d4408d2e73f1597d4ac54e533e3379f6_y5fexp.jpg",
+  cardColor: "#8517e6",
+};
+
+const zhongli = {
+  pokeId: 17,
+  name: "Zhongli",
+  franchise: "Genshin Impact",
+  type: "Earth ⛰️",
+  stats: {
+    atk: 65,
+    hp: 76,
+    speed: 58,
+    def: 86,
+  },
+  skill: {
+    icon: "<:zhongli_skill:1456927829550829612>",
+    name: "Heavenfall Accord",
+    description:
+      "Raises Defense by {0}% for 2 turns. When the effect expires, summons a falling meteor that Stuns the target for 1 turn.",
+    values: [[20, 25, 30, 40, 50, 60]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767423167/1bf30c662a572a5d105b6fa9df74f407_zdc3ho.jpg",
+  cardColor: "#805f06",
+};
+
+const skirk = {
+  pokeId: 18,
+  name: "Skirk",
+  franchise: "Genshin Impact",
+  type: "Ice ❄️",
+  stats: {
+    atk: 72,
+    hp: 78,
+    speed: 75,
+    def: 70,
+  },
+  skill: {
+    icon: "<:skirk_skill:1456936895115427860>",
+    name: "Havoc of the Abyss",
+    description:
+      "Unleashes a ruthless ice strike, dealing {0}% ATK as Ice damage and reducing the target’s Speed by 25% for 4 turns. If the target is already Slowed, deals an additional instance of DMG equals to {1}% of the target's current HP.",
+    values: [
+      [90, 110, 125, 140, 155, 170],
+      [10, 12, 14, 16, 18, 20],
+    ],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767423140/da813163854318dfec789f7c916d8150_ybioqx.jpg",
+  cardColor: "#106ec7",
+};
+//wip
+const flins = {
+  pokeId: 19,
+  name: "Flins",
+  franchise: "Genshin Impact",
+  type: "Electric ⚡",
+  stats: {
+    atk: 73,
+    hp: 66,
+    speed: 81,
+    def: 70,
+  },
+  skill: {
+    icon: "👊",
+    name: "Power Strike",
+    description: "Deals a powerful strike equals to {0}% of ATK damage.",
+    values: [[100, 110, 120, 130, 140, 150]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767423154/c4adb7e1359ce0bff6b914f2d92bbadd_kkbq1l.jpg",
+  cardColor: "#341bb3",
+};
+
+const doctor = {
+  pokeId: 20,
+  name: "Doctor",
+  franchise: "Arknights",
+  type: "Neutral ✨",
+  stats: {
+    atk: 66,
+    hp: 72,
+    speed: 70,
+    def: 68,
+  },
+  skill: {
+    icon: "<:doctor_skill:1457010478885634062>",
+    name: "Medic Protocol",
+    description:
+      "Activates healing protocols. For 3 turns, at the start of each turn, heals {0}% of Doctor's Max HP.",
+    values: [[5, 7, 9, 11, 13, 15]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767429949/0e0f352babd23cbc4413f9ef735ad72c_ubsvku.jpg",
+  cardColor: "#52d96d",
+};
+const castorice = {
+  pokeId: 21,
+  name: "Castorice",
+  franchise: "Honkai Star Rail",
+  type: "Dark 🌙",
+  stats: {
+    atk: 70,
+    hp: 95,
+    speed: 42,
+    def: 72,
+  },
+  skill: {
+    icon: "<:castorice_skill:1457011310767243405>",
+    name: "Queen of the Death Kingdom [PASSIVE]",
+    description:
+      "When Castorice would be reduced to 0 HP, she instead remains in combat for 3 turns. During this time, she gains ATK equal to {0}% of her Max HP. After 3 turns, she dies. In Raids, she remains alive even after the effect ends while keeping the buff.",
+    values: [[1, 2, 3, 4, 5, 6]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767429948/3828ca7218feffb362d69235ec249906_vsrwlx.jpg",
+  cardColor: "#c36ce0",
+};
+
+const amiya = {
+  pokeId: 22,
+  name: "Amiya",
+  franchise: "Arknights",
+  type: "Water 💧 ",
+  stats: {
+    atk: 70,
+    hp: 74,
+    speed: 70,
+    def: 72,
+  },
+  skill: {
+    icon: "",
+    name: "",
+    description: "",
+    values: [[]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767458551/ce0eba0ab4c62466a6c058fb72b38c96_relmyx.jpg",
+  cardColor: "#054973",
+};
+const wisadel = {
+  pokeId: 23,
+  name: "Wisadel",
+  franchise: "Arknights",
+  type: "Dark 🌙",
+  stats: {
+    atk: 92,
+    hp: 62,
+    speed: 78,
+    def: 55,
+  },
+  skill: {
+    icon: "",
+    name: "",
+    description: "",
+    values: [[]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767459025/37239f0f7f676c94155741e5b913b225_mvymoz.jpg",
+  cardColor: "#cc2c08",
+};
+
+const yuzuha = {
+  pokeId: 24,
+  name: "Ukinami Yuzuha",
+  franchise: "Zenless Zone Zero",
+  type: "Neutral ✨",
+  stats: {
+    atk: 68, 
+    hp: 75, 
+    speed: 82, 
+    def: 64, 
+  },
+  skill: {
+    icon: "",
+    name: "",
+    description: "",
+    values: [[]],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767459013/6d474d90e1557b32084db830752f1b98_dcjwno.jpg",
+  cardColor: "#e02f2f",
+};
 module.exports = {
   galbrena,
   carlotta,
@@ -283,4 +532,15 @@ module.exports = {
   lappland,
   trailblazer,
   herta,
+  acheron,
+  phainon,
+  raiden,
+  skirk,
+  zhongli,
+  flins,
+  doctor,
+  castorice,
+  amiya,
+  wisadel,
+  yuzuha,
 };

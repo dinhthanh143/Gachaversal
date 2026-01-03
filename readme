@@ -6,14 +6,16 @@ fix commands w updated schemas and scaling system
 seperated user's card inv to Cards
 updated scaling system and display system
 balanced cards data
-
-
-
+==================================
+to-do:
+miyabi spd => atk scale
+card drop after battling
+better sorting system cards user
+==================================
+extra:
 miyabi - spd scale
 galbrena - hp scale
 
-
-add "fav" func
 
 stats : dropcard/pullsystem
 scaling:
@@ -22,6 +24,4 @@ mobs: 0.03/level
 
 lower enemy skill scale
 
-done skill:
- trail, aether, wise, lappy, rover, qiuyuan, miyabi, yixuan, chisa, galbrena, carlotta,
 

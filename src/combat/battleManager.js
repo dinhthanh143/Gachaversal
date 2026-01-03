@@ -122,7 +122,9 @@ async function skipBattle(message, inputTimes = 1) {
 
   // 🔒 1. CHECK ACTIVE BATTLE (Prevent skipping while fighting)
   if (isUserBattling(userId)) {
-    return message.reply("⚠️ You are already in a battle! Finish that one first.");
+    return message.reply(
+      "⚠️ You are already in a battle! Finish that one first."
+    );
   }
 
   // 🔒 2. SET ACTIVE STATE
@@ -145,14 +147,17 @@ async function skipBattle(message, inputTimes = 1) {
     // Basic Area Checks
     if (areaId === 0) return message.reply("⚠️ Use `!area 1` first!");
     const areaData = DUNGEON_AREAS[areaId];
-    if (!areaData || !areaData.stages[stageId]) return message.reply("❌ Invalid Stage data.");
+    if (!areaData || !areaData.stages[stageId])
+      return message.reply("❌ Invalid Stage data.");
 
     // --- B. Progression Check (Must clear stage manually first) ---
     if (
-      areaId > user.dungeon.maxArea || 
+      areaId > user.dungeon.maxArea ||
       (areaId === user.dungeon.maxArea && stageId >= user.dungeon.maxStage)
     ) {
-      return message.reply("🚫 You must manually clear this stage once before you can skip it!");
+      return message.reply(
+        "🚫 You must manually clear this stage once before you can skip it!"
+      );
     }
 
     // --- C. Validate Run Count & Stamina ---
@@ -165,7 +170,9 @@ async function skipBattle(message, inputTimes = 1) {
       // If not enough stamina, calculate max possible runs
       const possibleRuns = Math.floor(user.stam / STAMINA_COST);
       if (possibleRuns === 0) {
-        return message.reply(`⚠️ Not enough Stamina for even 1 battle! (Need ${STAMINA_COST} ⚡)`);
+        return message.reply(
+          `⚠️ Not enough Stamina for even 1 battle! (Need ${STAMINA_COST} ⚡)`
+        );
       }
       requestedRuns = possibleRuns;
     }
@@ -174,7 +181,7 @@ async function skipBattle(message, inputTimes = 1) {
     const playerCard = user.selectedCard;
     const mobTemplate = areaData.stages[stageId].mobs[0];
     const difficulty = areaData.stages[stageId].difficultyLevel;
-    
+
     let totalGold = 0;
     let totalCardXp = 0;
     let totalAccountXp = 0;
@@ -191,26 +198,26 @@ async function skipBattle(message, inputTimes = 1) {
       totalGold += goldReward;
       totalCardXp += cardXpReward;
       totalAccountXp += accountXpGain;
-      
+
       // Card XP Application
       playerCard.xp += cardXpReward;
       let cardCap = getCardLevelCap(playerCard.level);
-      
+
       while (playerCard.xp >= cardCap) {
-          playerCard.xp -= cardCap;
-          playerCard.level++;
-          cardLevelUps++;
-          playerCard.stats.hp = Math.floor(playerCard.stats.hp * 1.025);
-          playerCard.stats.atk = Math.floor(playerCard.stats.atk * 1.015);
-          playerCard.stats.def = Math.floor(playerCard.stats.def * 1.01);
-          playerCard.stats.speed = Math.floor(playerCard.stats.speed * 1.02);
-          cardCap = getCardLevelCap(playerCard.level);
+        playerCard.xp -= cardCap;
+        playerCard.level++;
+        cardLevelUps++;
+        playerCard.stats.hp = Math.floor(playerCard.stats.hp * 1.025);
+        playerCard.stats.atk = Math.floor(playerCard.stats.atk * 1.015);
+        playerCard.stats.def = Math.floor(playerCard.stats.def * 1.01);
+        playerCard.stats.speed = Math.floor(playerCard.stats.speed * 1.02);
+        cardCap = getCardLevelCap(playerCard.level);
       }
       playerCard.xpCap = cardCap;
     }
 
     // --- F. Apply Account Changes ---
-    user.stam -= (requestedRuns * STAMINA_COST);
+    user.stam -= requestedRuns * STAMINA_COST;
     user.gold += totalGold;
     user.xp += totalAccountXp;
 
@@ -248,36 +255,41 @@ async function skipBattle(message, inputTimes = 1) {
       .setColor("#0099ff")
       .setDescription(`Farmed **Stage ${areaId}-${stageId}**`)
       .addFields(
-        { 
-          name: "💰 Rewards", 
-          value: `🪙 +${totalGold}\n${xpIcon} +${totalCardXp} (Card)\n🆙 +${totalAccountXp} (User)`, 
-          inline: true 
+        {
+          name: "💰 Rewards",
+          value: `🪙 +${totalGold}\n${xpIcon} +${totalCardXp} (Card)\n🆙 +${totalAccountXp} (User)`,
+          inline: true,
         },
-        { 
-          name: "⚡ Stamina", 
-          value: `Used: **${requestedRuns * STAMINA_COST}**\nRemaining: **${user.stam}/${user.stamCap}**`, 
-          inline: true 
+        {
+          name: "⚡ Stamina",
+          value: `Used: **${requestedRuns * STAMINA_COST}**\nRemaining: **${
+            user.stam
+          }/${user.stamCap}**`,
+          inline: true,
         }
       );
 
     if (cardLevelUps > 0) {
-      embed.addFields({ 
-          name: "📈 Card Growth", 
-          value: `**${playerCard.masterData ? playerCard.masterData.name : 'Card'}**\nLv. ${initialLevel} ➔ **Lv. ${playerCard.level}**\nStats increased!`, 
-          inline: false 
+      embed.addFields({
+        name: "📈 Card Growth",
+        value: `**${
+          playerCard.masterData ? playerCard.masterData.name : "Card"
+        }**\nLv. ${initialLevel} ➔ **Lv. ${
+          playerCard.level
+        }**\nStats increased!`,
+        inline: false,
       });
     }
 
     if (accountLevelsGained > 0) {
       embed.addFields({
-          name: "🎉 Account Level Up!",
-          value: `Reached **Lv. ${user.level}**!\n(+${lvlUpGold} Gold, +${lvlUpTickets} Tickets)`,
-          inline: false
+        name: "🎉 Account Level Up!",
+        value: `Reached **Lv. ${user.level}**!\n(+${lvlUpGold} Gold, +${lvlUpTickets} Tickets)`,
+        inline: false,
       });
     }
 
     return message.channel.send({ embeds: [embed] });
-
   } catch (err) {
     console.error(err);
     message.reply("Error processing skip battle.");
@@ -289,7 +301,7 @@ async function skipBattle(message, inputTimes = 1) {
 
 // Shortcut Alias
 async function sbt(message, inputTimes) {
-    return await skipBattle(message, inputTimes);
+  return await skipBattle(message, inputTimes);
 }
 
 // =========================================
@@ -359,19 +371,18 @@ async function startBattle(message) {
     }
     // FETCH FULL SKILL DATA TO GET ENERGY COSTS
     const playerSkillRef = getSkillSafe(playerSkill.name);
-    playerSkill.initialEnergy = playerSkillRef.initialEnergy !== undefined ? playerSkillRef.initialEnergy : 50;
+    playerSkill.initialEnergy =
+      playerSkillRef.initialEnergy !== undefined
+        ? playerSkillRef.initialEnergy
+        : 50;
     playerSkill.requiredEnergy = playerSkillRef.requiredEnergy || 100;
-
 
     const player = {
       name: playerName,
       level: playerCard.level,
       image: playerImage,
       type: masterData ? masterData.type : "Neutral ✨",
-      stats: { ...playerCard.stats,
-        critRate: 5, 
-        critDmg: 140,
-       },
+      stats: { ...playerCard.stats, critRate: 5, critDmg: 140 },
       maxHp: playerCard.stats.hp,
       // ✅ USE DYNAMIC INITIAL ENERGY
       energy: playerSkill.initialEnergy,
@@ -381,10 +392,16 @@ async function startBattle(message) {
     };
 
     // --- SETUP ENEMY SKILL ---
-    let enemySkill = mobTemplate.skill || { name: "Basic Attack", values: [1.0] };
+    let enemySkill = mobTemplate.skill || {
+      name: "Basic Attack",
+      values: [1.0],
+    };
     // FETCH FULL SKILL DATA FOR ENEMY
     const enemySkillRef = getSkillSafe(enemySkill.name);
-    enemySkill.initialEnergy = enemySkillRef.initialEnergy !== undefined ? enemySkillRef.initialEnergy : 50;
+    enemySkill.initialEnergy =
+      enemySkillRef.initialEnergy !== undefined
+        ? enemySkillRef.initialEnergy
+        : 50;
     enemySkill.requiredEnergy = enemySkillRef.requiredEnergy || 100;
 
     const enemy = {
@@ -394,7 +411,7 @@ async function startBattle(message) {
       type: mobTemplate.type || "Neutral ✨",
       stats: {
         ...mobTemplate.stats,
-        critRate: 5, 
+        critRate: 5,
         critDmg: 140,
       },
       maxHp: mobTemplate.stats.hp,
@@ -412,7 +429,7 @@ async function startBattle(message) {
     let playerWon = false;
 
     logs.push(`⚔️ Battle Started!`);
-    
+
     // --- PASSIVE ACTIVATION ---
     const activatePassive = (unit, target) => {
       if (unit.skill && unit.skill.name.includes("[PASSIVE]")) {
@@ -529,26 +546,12 @@ async function startBattle(message) {
           });
           await wait(1000);
         }
+        const isStunned =
+          actor.effects && actor.effects.some((e) => e.stat === "stun");
 
-        // B. ACTION (Skill/Basic)
-        // Check Silence *after* start ticks but *before* acting
-        const isSilenced =
-          actor.effects && actor.effects.some((e) => e.stat === "silence");
-
-        // ✅ CHECK DYNAMIC REQUIRED ENERGY
-        const skillCost = actor.skill.requiredEnergy || 100;
-
-        if (actor.energy >= skillCost && !isSilenced) {
-          const skillLogic = getSkillSafe(actor.skill.name);
-          const skillResult = skillLogic.execute(
-            actor,
-            target,
-            actor.skill.values
-          );
-          // ✅ CONSUME DYNAMIC ENERGY
-          actor.energy -= skillCost;
-          logs.push(skillResult.log);
-
+        if (isStunned) {
+          logs.push(`🚫 **${actor.name}** is **Stunned** and couldn't act!`);
+          // We SKIP the Action Phase (Skill/Basic) entirely
           updateBars();
           embedData = await createBattleEmbed(
             player,
@@ -566,47 +569,88 @@ async function startBattle(message) {
             embeds: [embedData.embed],
             files: embedData.files,
           });
-          await wait(1000);
-        }
-
-        // Basic Attack Logic (Always runs if target alive)
-        if (target.stats.hp > 0) {
-          const basicLogic = getSkillSafe("Basic Attack");
-          const basicResult = basicLogic.execute(actor, target);
-
+          await wait(1500);
+        } else {
+          const isSilenced =
+            actor.effects && actor.effects.some((e) => e.stat === "silence");
+          //Check pasive
           const isPassiveSkill =
             actor.skill && actor.skill.name.includes("[PASSIVE]");
-          
-          // Regen Energy logic:
-          // 1. Must NOT be Silenced
-          // 2. Must NOT have a Passive Skill (Passive users don't need energy)
-          if (!isSilenced && !isPassiveSkill) {
-            actor.energy = Math.min(skillCost, actor.energy + 25); // Cap at max
-          }
-          logs.push(basicResult.log);
+          // ✅ CHECK DYNAMIC REQUIRED ENERGY
+          const skillCost = actor.skill.requiredEnergy || 100;
+          const canUseSkill = !isSilenced || isPassiveSkill;
+          if (actor.energy >= skillCost && !isSilenced && canUseSkill) {
+            const skillLogic = getSkillSafe(actor.skill.name);
+            const skillResult = skillLogic.execute(
+              actor,
+              target,
+              actor.skill.values
+            );
+            // ✅ CONSUME DYNAMIC ENERGY
+            actor.energy -= skillCost;
+            logs.push(skillResult.log);
 
-          updateBars();
-          embedData = await createBattleEmbed(
-            player,
-            player.type,
-            enemy.type,
-            playerCard.rarity,
-            mobTemplate.rarity,
-            enemy,
-            logs,
-            turn,
-            battleBuffer,
-            battleTitle
-          );
-          await battleMsg.edit({
-            embeds: [embedData.embed],
-            files: embedData.files,
-          });
-          await wait(2000);
+            updateBars();
+            embedData = await createBattleEmbed(
+              player,
+              player.type,
+              enemy.type,
+              playerCard.rarity,
+              mobTemplate.rarity,
+              enemy,
+              logs,
+              turn,
+              battleBuffer,
+              battleTitle
+            );
+            await battleMsg.edit({
+              embeds: [embedData.embed],
+              files: embedData.files,
+            });
+            await wait(1000);
+          }
+
+          // Basic Attack Logic (Always runs if target alive)
+          if (target.stats.hp > 0) {
+            const basicLogic = getSkillSafe("Basic Attack");
+            const basicResult = basicLogic.execute(actor, target);
+
+            const isPassiveSkill =
+              actor.skill && actor.skill.name.includes("[PASSIVE]");
+
+            // Regen Energy logic:
+            // 1. Must NOT be Silenced
+            // 2. Must NOT have a Passive Skill (Passive users don't need energy)
+            if (!isSilenced && !isPassiveSkill) {
+              actor.energy = Math.min(skillCost, actor.energy + 25); // Cap at max
+            }
+            logs.push(basicResult.log);
+
+            updateBars();
+            embedData = await createBattleEmbed(
+              player,
+              player.type,
+              enemy.type,
+              playerCard.rarity,
+              mobTemplate.rarity,
+              enemy,
+              logs,
+              turn,
+              battleBuffer,
+              battleTitle
+            );
+            await battleMsg.edit({
+              embeds: [embedData.embed],
+              files: embedData.files,
+            });
+            await wait(2000);
+          }
         }
+        // B. ACTION (Skill/Basic)
+        // Check Silence *after* start ticks but *before* acting
 
         // C. ✅ END OF TURN EFFECTS (Decrement/Expire happens HERE)
-        const endLogs = applyEndTurnEffects(actor);
+        const endLogs = applyEndTurnEffects(actor, target);
         if (endLogs.length > 0) {
           logs.push(...endLogs);
           updateBars();
