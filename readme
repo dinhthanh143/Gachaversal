@@ -1,0 +1,27 @@
+fix commands w updated schemas and scaling system
+(inv, addcard,...)
+
+
+12/17/25
+seperated user's card inv to Cards
+updated scaling system and display system
+balanced cards data
+
+
+
+miyabi - spd scale
+galbrena - hp scale
+
+
+add "fav" func
+
+stats : dropcard/pullsystem
+scaling:
+cards: 0.03/level
+mobs: 0.03/level
+
+lower enemy skill scale
+
+done skill:
+ trail, aether, wise, lappy, rover, qiuyuan, miyabi, yixuan, chisa, galbrena, carlotta,
+

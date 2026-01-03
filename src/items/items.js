@@ -1,0 +1,91 @@
+module.exports = {
+  b1: {
+    name: "Minor Blessing",
+    description: "Grants **100 XP**.",
+    emoji: "✨",
+    type: "Consumable",
+    price: 500,
+    currency: "gold",
+    xpAmount: 100,
+  },
+
+  b2: {
+    name: "Major Blessing",
+    description: "Grants **1,000 XP**.",
+    emoji: "🌟",
+    type: "Consumable",
+    price: 4500,
+    currency: "gold",
+    xpAmount: 1000,
+  },
+
+  b3: {
+    name: "Grand Blessing",
+    description: "Grants **5,000 XP**.",
+    emoji: "💫",
+    type: "Consumable",
+    price: 20000,
+    currency: "gold",
+    xpAmount: 5000,
+  },
+
+  b4: {
+    name: "Divine Blessing",
+    description: "Grants **25,000 XP**.",
+    emoji: "💠",
+    type: "Consumable",
+    price: 90000,
+    currency: "gold",
+    xpAmount: 25000,
+  },
+
+  // --- Gacha Items ---
+  ticket: {
+    name: "Summon Ticket",
+    description: "Used to pull on standard banner.",
+    emoji: "🎫",
+    type: "Consumable",
+    price: 20,
+    currency: "gem",
+  },
+  tide: {
+    name: "Radiant Tide",
+    description: "Used to convene for Resonators.",
+    emoji: "<:wuwaPull:1453226896329412770>",
+    type: "Consumable",
+    price: 20,
+    currency: "gem",
+  },
+  tape: {
+    name: "Encrypted Master Tape",
+    description: "Used for Signal Search.",
+    emoji: "<:zzzPull:1453233952151310478>",
+    type: "Consumable",
+    price: 20,
+    currency: "gem",
+  },
+  fate: {
+    name: "Intertwined Fate",
+    description: "Used to Wish.",
+    emoji: "<:genshinPull:1453234890416984207>",
+    type: "Consumable",
+    price: 20,
+    currency: "gem",
+  },
+  pass: {
+    name: "Special Pass",
+    description: "Used to Warp.",
+    emoji: "<:hsrPull:1453226721632587849>",
+    type: "Consumable",
+    price: 20,
+    currency: "gem",
+  },
+  permit: {
+    name: "Headhunting Permit",
+    description: "Used to recuit Operators.",
+    emoji: "<:permit:1454862332374155366>",
+    type: "Consumable",
+    price: 20,
+    currency: "gem",
+  },
+};

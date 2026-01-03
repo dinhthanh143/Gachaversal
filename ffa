@@ -1,0 +1,28 @@
+function calculateStats(baseStats, rarity) {
+  if (!baseStats) baseStats = { hp: 75, atk: 60, def: 50, speed: 69 };
+
+  return {
+   // 🩸 HP Rebalanced: Base * (3 + Rarity)
+    // 3-Star (Base 75): 75 * 6 = 450 HP
+    // 5-Star (Base 75): 75 * 8 = 600 HP
+   hp: Math.floor(
+      baseStats.hp * (3 + rarity) + rarity * 20 + Math.floor(Math.random() * 20)
+    ),
+
+    atk: baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10),
+    def: baseStats.def + 20 * rarity + Math.floor(Math.random() * 10),
+    speed: baseStats.speed + 7 * rarity + Math.floor(Math.random() * 5),
+  };
+}
+
+
+   while (playerCard.xp >= cardCap) {
+        playerCard.xp -= cardCap;
+        playerCard.level++;
+        cardLevelUps++;
+        playerCard.stats.hp = Math.floor(playerCard.stats.hp * 1.025);
+        playerCard.stats.atk = Math.floor(playerCard.stats.atk * 1.015);
+        playerCard.stats.def = Math.floor(playerCard.stats.def * 1.01);
+        playerCard.stats.speed = Math.floor(playerCard.stats.speed * 1.02);
+        cardCap = getCardLevelCap(playerCard.level);
+      }
