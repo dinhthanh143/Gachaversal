@@ -459,6 +459,6 @@ async function executeSpecificPull(interaction, bannerType, icon, amount = 1) {
   }
 }
 
-module.exports = { executeSinglePull, executeTenPull, executeSpecificPull };
+module.exports = { executeSinglePull, executeTenPull, executeSpecificPull,calculateStats };
 
 module.exports = { executeTenPull, executeSinglePull, executeSpecificPull };

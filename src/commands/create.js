@@ -1,4 +1,5 @@
 const { UserContainer, Inventory } = require("../db"); 
+const { starterChoice } = require("../starter/starterChoice");
 
 async function createAccount(message) {
   try {
@@ -33,6 +34,7 @@ async function createAccount(message) {
     });
 
     message.reply("Your profile has been created successfully!");
+    await starterChoice(message)
   } catch (err) {
     console.error("Create error:", err);
     message.reply("Something exploded on the server.");

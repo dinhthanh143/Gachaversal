@@ -443,7 +443,7 @@ const Skills = {
     description: "Marks target for delayed damage.",
     execute: (attacker, defender, skillValues = [1.1]) => {
       const multiplier = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 1.1;
-      const trueDamage = Math.floor(attacker.stats.speed * multiplier);
+      const trueDamage = Math.floor(attacker.stats.atk * multiplier);
       addBuff(defender, "Judgement Mark", "delayedDmg", trueDamage, 2);
       return { damage: 0, log: `**${attacker.name}** uses **Judgement Cut**!\n**${defender.name}** is marked for 2 turns...` };
     },

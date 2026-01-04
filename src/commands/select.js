@@ -34,23 +34,18 @@ async function select(message) {
       // --- DATA PREP ---
       const master = card.masterData;
       const rarityStars = getRarityStars(card.rarity);
-      const scaledImg = formatImage(master.image, 330, 550);
-      const xpCap = card.xpCap || 50; 
+      const scaledImg = await formatImage(master.image, 330, 550);
+      const xpCap = card.xpCap || 50;
 
-      // ✅ UPDATED SKILL LOGIC (Double Array Support)
+      // Skill Scaling Logic
       let finalSkillDesc = master.skill.description;
       if (master.skill.values && master.skill.values.length > 0) {
-        const rarityIndex = card.rarity - 1; // 0-based index for rarity
-        
-        // Loop through each value array (Array 0 for {0}, Array 1 for {1})
+        const rarityIndex = Math.max(0, card.rarity - 1);
         master.skill.values.forEach((valueArray, i) => {
           if (Array.isArray(valueArray) && valueArray.length > 0) {
-            // Get value for current rarity (fallback to last if index out of bounds)
             const val = valueArray[rarityIndex] !== undefined 
               ? valueArray[rarityIndex] 
               : valueArray[valueArray.length - 1];
-
-            // Replace {0}, {1} etc.
             const regex = new RegExp(`\\{${i}\\}`, "g");
             finalSkillDesc = finalSkillDesc.replace(regex, val);
           }
@@ -73,11 +68,11 @@ async function select(message) {
           {
             name: "Stats",
             value:
-              `**ATK:** ${card.stats.atk}\n` +
-              `**HP:** ${card.stats.hp}\n` +
-              `**Speed:** ${card.stats.speed}\n` +
-              `**Defense:** ${card.stats.def}\n` +
-              `**XP:** ${card.xp} / ${xpCap}`,
+              `⚔️ **ATK:** ${card.stats.atk}\n` +
+              `🩸 **HP:** ${card.stats.hp}\n` +
+              `💨 **SPD:** ${card.stats.speed}\n` +
+              `🛡️ **DEF:** ${card.stats.def}\n` +
+              `✨ **XP:** ${card.xp} / ${xpCap}`,
           },
           {
             name: `Skill: ${master.skill.name} ${master.skill.icon || ""}`,
@@ -99,36 +94,22 @@ async function select(message) {
       return message.reply("Invalid ID. Try again (e.g., `!select 1`)");
     }
 
-    // ✅ FETCH ALL & SORT IN JS (To match !cards order)
-    // We cannot use .skip() because the sort order depends on 'selectedCard' & 'fav'
+    // ✅ FETCH ALL & USE STABLE CHRONOLOGICAL SORT
+    // Sort: _id (Ascending) -> Oldest to Newest
     let userCards = await Cards.find({ ownerId: userId })
       .populate("masterData")
-      .sort({ rarity: -1, level: -1, _id: -1 });
+      .sort({ _id: 1 }); // ✅ CHANGED TO MATCH INVENTORY
 
-    const selectedIdStr = user.selectedCard ? user.selectedCard.toString() : null;
+    if (!userCards || userCards.length === 0) {
+        return message.reply("You have no cards.");
+    }
 
-    userCards.sort((a, b) => {
-      const aId = a._id.toString();
-      const bId = b._id.toString();
-
-      // 1. Selected First
-      if (aId === selectedIdStr) return -1;
-      if (bId === selectedIdStr) return 1;
-
-      // 2. Fav Second
-      if (a.fav && !b.fav) return -1;
-      if (!a.fav && b.fav) return 1;
-
-      // 3. DB Sort (already done)
-      return 0;
-    });
-
-    // Pick card by visual index
+    // Pick card by stable index (1-based from input maps directly to array index)
     const cardIndex = indexInput - 1;
     const card = userCards[cardIndex];
 
     if (!card) {
-      return message.reply("That card doesn't exist in your inventory.");
+      return message.reply(`Card **#${indexInput}** not found in your inventory.`);
     }
     if (!card.masterData) {
       return message.reply("Card data corrupted.");
@@ -140,7 +121,7 @@ async function select(message) {
 
     // Success Message
     message.reply(
-      `Successfully equipped **${card.masterData.name}** (Lv. ${card.level}) ${getRarityStars(card.rarity)}`
+      `Successfully equipped **#${indexInput} ${card.masterData.name}** (Lv. ${card.level}) ${getRarityStars(card.rarity)}`
     );
 
   } catch (error) {

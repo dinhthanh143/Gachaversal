@@ -1,4 +1,4 @@
-const { UserContainer, Inventory } = require("../db"); 
+const { UserContainer, Inventory } = require("../db");
 
 // ==========================
 // HOURLY COMMAND
@@ -22,17 +22,19 @@ async function hourly(message) {
       const mins = Math.ceil(remaining / (1000 * 60));
       return message.reply(`Come back in **${mins} minutes** to claim again.`);
     }
-
-    const reward = 1500;
-    const stamReward = 500
-    user.stam += stamReward
+    let stamCheck = "";
+    const reward = 1000;
+    let stamReward = 500;
+    if (user.stam >= user.stamCap) {
+      stamReward = 0;
+      stamCheck = "(Maxed)"
+    }
+    user.stam += stamReward;
     user.gold += reward;
     user.lastHourly = now;
     await user.save();
 
-    message.reply(
-      `You collected **${reward} 💰**! New balance: **${user.gold}**.`
-    );
+    message.reply(`You collected **${reward} 💰** and ${stamReward} Stamina${stamCheck}!`);
   } catch (err) {
     console.error("Hourly error:", err);
     message.reply("My wallet just caught on fire. Try again later.");
@@ -54,7 +56,7 @@ async function daily(message) {
     }
 
     const now = new Date();
-    const oneDay = 1000 * 60 * 60 * 24; 
+    const oneDay = 1000 * 60 * 60 * 24;
 
     if (user.lastDaily && now - user.lastDaily < oneDay) {
       const remaining = oneDay - (now - user.lastDaily);
@@ -67,7 +69,7 @@ async function daily(message) {
 
     // 2. Add Gold
     const goldReward = 15000;
-    const diamondReward = 5
+    const diamondReward = 5;
     user.gold += goldReward;
     user.gem += diamondReward;
     user.stam += user.stamCap;
@@ -103,4 +105,70 @@ async function daily(message) {
   }
 }
 
-module.exports = { hourly, daily };
+
+async function weekly(message) {
+  try {
+    const userId = message.author.id;
+    let user = await UserContainer.findOne({ userId });
+
+    if (!user) {
+      return message.reply(
+        "You don't have an account. Type `!create` to make one."
+      );
+    }
+
+    const now = new Date();
+    const oneWeek = 1000 * 60 * 60 * 24 * 7;
+
+    if (user.lastWeekly && now - user.lastWeekly < oneWeek) {
+      const remaining = oneWeek - (now - user.lastWeekly);
+      const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      const hours = Math.ceil((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      return message.reply(
+        `Weekly is on cooldown! Come back in **${days}d ${hours}h**.`
+      );
+    }
+
+    // 2. Rewards Calculation
+    const goldReward = 50000;
+    const diamondReward = 30;
+    const ticketReward = 4;
+    const blessingReward = 3;
+    const blessingId = "b3"; // Grand Blessing
+
+    // Apply Currency
+    user.gold += goldReward;
+    user.gem += diamondReward;
+
+    // Apply Inventory Items
+    let inv = await Inventory.findOne({ userId });
+    if (!inv) inv = await Inventory.create({ userId, items: [] });
+
+    // Add Summon Tickets
+    const ticketItem = inv.items.find((i) => i.itemId === "ticket");
+    if (ticketItem) ticketItem.amount += ticketReward;
+    else inv.items.push({ itemId: "ticket", amount: ticketReward });
+
+    // Add Grand Blessings
+    const blessingItem = inv.items.find((i) => i.itemId === blessingId);
+    if (blessingItem) blessingItem.amount += blessingReward;
+    else inv.items.push({ itemId: blessingId, amount: blessingReward });
+
+    // 5. Save Everything
+    user.lastWeekly = now;
+    await user.save();
+    await inv.save();
+
+    message.reply(
+      `📅 **Weekly Claimed!**\n` +
+        `💰 +${goldReward.toLocaleString()} Gold\n` +
+        `💎 +${diamondReward} Gems\n` +
+        `🎫 +${ticketReward} Summon Tickets\n` +
+        `💫 +${blessingReward} Grand Blessings`
+    );
+  } catch (err) {
+    console.error("Weekly error:", err);
+    message.reply("Something went wrong with claiming your weekly.");
+  }
+}
+module.exports = { hourly, daily, weekly };

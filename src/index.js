@@ -1,5 +1,4 @@
 // index.js
-// 1. Load environment variables first
 require("dotenv").config();
 const axios = require("axios");
 const token = process.env.DISCORD_TOKEN;
@@ -16,7 +15,7 @@ const { getRarityStars, wrapSkillDescription } = require("./functions");
 const { id } = require("./commands/id");
 const { createAccount } = require("./commands/create");
 const { start } = require("./commands/start");
-const { hourly, daily } = require("./commands/hourly_daily_weekly");
+const { hourly, daily, weekly } = require("./commands/hourly_daily_weekly");
 const { cards, inv, fav } = require("./commands/inv_cards");
 const { view } = require("./commands/viewCard");
 const { gold, pity, gem } = require("./commands/currency");
@@ -39,16 +38,17 @@ const {
 } = require("./dungeon/dungeon");
 const { startBattle, skipBattle } = require("./combat/battleManager");
 const mobData = require("./characters/mob");
-connectDB();
-// const { miyabi } = require("./characters/characters");
 const allCharacters = require("./characters/characters");
-// 3. Import necessary Discord.js classes
+const { useitem } = require("./items/useItem");
+
 const {
   Client,
   Events,
   GatewayIntentBits,
   EmbedBuilder,
 } = require("discord.js");
+
+connectDB();
 
 if (!token) {
   console.error(
@@ -68,71 +68,41 @@ const client = new Client({
 client.once(Events.ClientReady, (c) => {
   console.log(`✅ Ready! Logged in as ${c.user.tag}`);
 });
+
 const VALID_COMMANDS = new Set([
-  "!id",
-  "!start",
-  "!create",
-  "!level",
-  "!addxp",
-  "!hourly",
-  "!h",
-  "!daily",
-  "!d",
-  "!inv",
-  "!cards",
-  "!c",
-  "!addcard",
-  "!view",
-  "!gold",
-  "!g",
-  "!stam",
-  "!st",
-  "!gem",
-  "!pity",
-  "!delete",
-  "!pd",
-  "!dropcard",
-  "!select",
-  "!index",
-  "!info",
-  "!profile",
-  "!p",
-  "!help",
-  "!fight",
-  "!gacha",
-  "!shop",
-  "!buy",
+  "!id", "!start", "!create", "!level", "!addxp", "!hourly", "!h", "!daily", "!d", "!weekly",
+  "!inv", "!cards", "!c", "!addcard", "!view", "!gold", "!g", "!stam", "!st", "!gem",
+  "!pity", "!delete", "!pd", "!dropcard", "!select", "!index", "!info", "!profile", "!p",
+  "!help", "!fight", "!gacha", "!shop", "!buy", "!useitem", "!battle", "!bt", "!sbt", "!skipbattle",
+  "!mindex", "!minfo", "!dungeon", "!area", "!stage", "!resetdun", "!next",
   // Admin commands
-  "!pokeadd",
-  "!addIndex",
-  "!addgold",
-  "!addticket",
-  "!dacc",
-  "!dindex",
-  "!dall",
-  "!dinv",
+  "!pokeadd", "!addIndex", "!addgold", "!addticket", "!dacc", "!dindex", "!dall", "!dinv", "!addmob", "!dmob", "!adminstam"
 ]);
+
 const cooldowns = new Map();
 const COOLDOWN_SECONDS = 1;
 const prefix = "!";
+const ADMIN_ID = "490338110572331018";
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
+  
+  // 1. PARSE COMMAND
+  const args = message.content.trim().split(/ +/);
+  const commandName = args[0].toLowerCase(); // e.g., "!create", "!cards"
+
+  // 2. CHECK COOLDOWNS & VALIDITY
   if (message.content.startsWith(prefix)) {
-    const args = message.content.trim().split(/ +/);
-    const commandName = args[0].toLowerCase();
     if (VALID_COMMANDS.has(commandName)) {
       const userId = message.author.id;
-      const ADMIN_ID = "490338110572331018";
 
       if (userId !== ADMIN_ID) {
         if (cooldowns.has(userId)) {
-          const expirationTime =
-            cooldowns.get(userId) + COOLDOWN_SECONDS * 1000;
+          const expirationTime = cooldowns.get(userId) + COOLDOWN_SECONDS * 1000;
           const now = Date.now();
 
           if (now < expirationTime) {
-            const timeLeft = ((expirationTime - now) / 1000).toFixed(1);
+            // const timeLeft = ((expirationTime - now) / 1000).toFixed(1);
             return message.reply(`✋ **Calm down!** You are typing too fast.`);
           }
         }
@@ -143,77 +113,67 @@ client.on(Events.MessageCreate, async (message) => {
   }
 
   // ====================================================
-  // COMMANDS START HERE
+  // ROUTING LOGIC (STRICT MATCHING)
   // ====================================================
 
-  // show acc id
-  if (message.content === prefix + "id") {
+  if (commandName === prefix + "id") {
     id(message);
   }
-  // start game
-  if (message.content === prefix + "start") {
+
+  if (commandName === prefix + "sellcard" || commandName === prefix + "sc") {
+    // id(message); // Typo in your original code? Assuming you meant sell logic here
+    message.reply("Sell card not implemented yet.");
+  }
+
+  if (commandName === prefix + "start") {
     await start(message);
   }
-  // create
-  if (message.content === prefix + "create") {
+
+  if (commandName === prefix + "create") {
     await createAccount(message);
   }
-  // addxp
-  if (message.content.startsWith("!addxp")) {
-    const args = message.content.split(" ");
-    const amount = parseInt(args[1]);
 
+  if (commandName === prefix + "addxp") {
+    const amount = parseInt(args[1]);
     if (isNaN(amount) || amount <= 0) {
       return message.reply("Give a positive XP number.");
     }
-    // give exp
     await giveXpAndNotify(message, amount, addXp);
   }
-  // level
-  if (message.content === "!level") {
+
+  if (commandName === prefix + "level") {
     const info = await getLevel(message.author.id);
     if (!info) return message.reply("You don’t exist yet. Use !create");
-
-    message.reply(
-      `Level: **${info.level}**\nXP: **${info.currentXp}/${info.nextLevelXp}**`
-    );
+    message.reply(`Level: **${info.level}**\nXP: **${info.currentXp}/${info.nextLevelXp}**`);
   }
-  // Hourly gold
-  if (
-    message.content === prefix + "hourly" ||
-    message.content === prefix + "h"
-  ) {
+
+  // Economy
+  if (commandName === prefix + "hourly" || commandName === prefix + "h") {
     await hourly(message);
   }
-  // daiky
-  if (
-    message.content === prefix + "daily" ||
-    message.content === prefix + "d"
-  ) {
+  if (commandName === prefix + "daily" || commandName === prefix + "d") {
     await daily(message);
   }
-  // inv & cards
-  if (message.content === prefix + "inv") {
+  if (commandName === prefix + "weekly") {
+    await weekly(message);
+  }
+
+  // Inventory & Cards
+  if (commandName === prefix + "inv") {
     await inv(message);
   }
-  if (
-    message.content === prefix + "cards" ||
-    message.content === prefix + "c"
-  ) {
+  // ✅ STRICT CHECK: Prevents !create from triggering !cards
+  if (commandName === prefix + "cards" || commandName === prefix + "c") {
     await cards(message);
   }
-  if (message.content.startsWith(prefix + "fav")) {
+  if (commandName === prefix + "fav") {
     await fav(message);
   }
 
-  // add card to inv
-if (message.content.startsWith(prefix + "addcard")) {
+  // Add Card (Admin/Debug)
+  if (commandName === prefix + "addcard") {
     try {
-      const args = message.content.split(" ");
       const cardId = parseInt(args[1]);
-      
-      // ✅ Optional: Allow setting rarity (Default to 4 if not typed)
-      // Usage: !addcard <id> <rarity>
       let rarity = parseInt(args[2]);
       if (isNaN(rarity) || rarity < 1 || rarity > 5) rarity = 4;
 
@@ -221,43 +181,29 @@ if (message.content.startsWith(prefix + "addcard")) {
         return message.reply("Try giving me a real number, genius.");
       }
 
-      // 1. Fetch global card from Index
       const cardData = await Index.findOne({ pokeId: cardId });
       if (!cardData) {
         return message.reply("That card does not exist in the Pokédex.");
       }
 
       const userId = message.author.id;
-
-      // 2. Ensure User Exists (Create if not)
       let user = await UserContainer.findOne({ userId });
       if (!user) {
         user = await UserContainer.create({ userId });
       }
 
-      // 3. ✅ CALCULATE STATS (Matches pullSystem.js logic)
       const baseStats = cardData.stats;
       const uniqueStats = {
-        // 🩸 HP: Base * (3 + Rarity) + Flat Variance
-        // 5-Star (Base 75): ~600 HP
-        hp: Math.floor(
-          baseStats.hp * (3 + rarity) + rarity * 20 + Math.floor(Math.random() * 20)
-        ),
-
-        // ⚔️ ATK: Base + 25*R
+        hp: Math.floor(baseStats.hp * (3 + rarity) + rarity * 20 + Math.floor(Math.random() * 20)),
         atk: baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10),
-
-        // 🛡️ DEF: Base + 20*R
         def: baseStats.def + 20 * rarity + Math.floor(Math.random() * 10),
-
-        // 💨 SPEED: Base + 7*R
         speed: baseStats.speed + 7 * rarity + Math.floor(Math.random() * 5),
       };
 
       await Cards.create({
-        ownerId: userId, // Who owns it
-        cardId: cardData.pokeId, // Link to Index
-        stats: uniqueStats, // The RNG stats
+        ownerId: userId,
+        cardId: cardData.pokeId,
+        stats: uniqueStats,
         rarity: rarity,
         level: 1,
         xp: 0,
@@ -266,10 +212,7 @@ if (message.content.startsWith(prefix + "addcard")) {
       const embed = new EmbedBuilder()
         .setColor(cardData.cardColor || "#FFFFFF")
         .setTitle(`🎴 Obtained ${cardData.name}!`)
-        .setDescription(
-          `**Rarity:** ${rarity} ⭐\n` +
-          `**HP:** ${uniqueStats.hp} | **ATK:** ${uniqueStats.atk} | **DEF:** ${uniqueStats.def} | **SPD:** ${uniqueStats.speed}`
-        )
+        .setDescription(`**Rarity:** ${rarity} ⭐\n` + `**HP:** ${uniqueStats.hp} | **ATK:** ${uniqueStats.atk} | **DEF:** ${uniqueStats.def} | **SPD:** ${uniqueStats.speed}`)
         .setThumbnail(cardData.image);
 
       message.reply({ embeds: [embed] });
@@ -279,96 +222,68 @@ if (message.content.startsWith(prefix + "addcard")) {
     }
   }
 
-  // view card inv
-  if (message.content.startsWith(prefix + "view")) {
-    const args = message.content.trim().split(/\s+/);
-    const cmd = args.shift().toLowerCase();
-
-    if (cmd === prefix + "view") {
-      await view(message);
-    }
+  if (commandName === prefix + "view") {
+    await view(message);
   }
-  //show gold
-  if (message.content === prefix + "gold" || message.content === prefix + "g") {
+
+  // Currency
+  if (commandName === prefix + "gold" || commandName === prefix + "g") {
     await gold(message);
   }
-  //show stam
-  if (
-    message.content === prefix + "stam" ||
-    message.content === prefix + "st"
-  ) {
+  if (commandName === prefix + "stam" || commandName === prefix + "st") {
     await stam(message);
   }
-
-  if (message.content === prefix + "gua") {
+  if (commandName === prefix + "gem") {
+    await gem(message);
+  }
+  if (commandName === prefix + "pity") {
+    await pity(message);
+  }
+  if (commandName === prefix + "gua") {
     await guaranteed(message);
   }
-  // delete
-  if (message.content.startsWith(prefix + "delete")) {
-    const args = message.content.split(" ");
-    const targetId = args[1];
 
-    if (!targetId) {
-      return message.reply("You need to provide a user ID to delete.");
-    }
+  // Deletion
+  if (commandName === prefix + "delete") {
+    const targetId = args[1];
+    if (!targetId) return message.reply("You need to provide a user ID to delete.");
 
     try {
-      const deletedUser = await UserContainer.findOneAndDelete({
-        userId: targetId,
-      });
-
-      if (!deletedUser) {
-        return message.reply("No user found with that ID.");
-      }
-
+      const deletedUser = await UserContainer.findOneAndDelete({ userId: targetId });
+      const delInv = await Inventory.findOneAndDelete({ userId: targetId });
+      if (!deletedUser) return message.reply("No user found with that ID.");
+      if (!delInv) return message.reply("No inv found with that ID.");
       message.reply(`User with ID **${targetId}** has been deleted.`);
     } catch (err) {
       console.error("Delete error:", err);
       message.reply("Something went wrong while deleting.");
     }
   }
-  // delete card
-  if (message.content.startsWith(prefix + "pd")) {
-    const args = message.content.split(" ");
-    const targetId = args[1];
 
-    if (!targetId) {
-      return message.reply("You need to provide a user ID to delete.");
-    }
+  if (commandName === prefix + "pd") {
+    const targetId = args[1];
+    if (!targetId) return message.reply("You need to provide a Pokemon ID to delete.");
 
     try {
-      const deletedUser = await Index.findOneAndDelete({
-        pokeId: targetId,
-      });
-
-      if (!deletedUser) {
-        return message.reply("No Pokemon found with that ID.");
-      }
-
+      const deletedIndex = await Index.findOneAndDelete({ pokeId: targetId });
+      if (!deletedIndex) return message.reply("No Pokemon found with that ID.");
       message.reply(`Pokemon with ID **${targetId}** has been deleted.`);
     } catch (err) {
       console.error("Delete error:", err);
       message.reply("Something went wrong while deleting.");
     }
   }
-  // add all to index
-  if (
-    message.content === prefix + "addindex" &&
-    message.author.id === "490338110572331018"
-  ) {
-    try {
-      // Convert the exported object into a list of characters
-      const charList = Object.values(allCharacters);
 
+  // Admin Tools
+  if (commandName === prefix + "addindex" && message.author.id === ADMIN_ID) {
+    try {
+      const charList = Object.values(allCharacters);
       let added = 0;
       let skipped = 0;
-
       message.reply(`🔄 Processing ${charList.length} cards...`);
 
       for (const char of charList) {
-        // Check if this specific char is already in DB
         const exists = await Index.findOne({ name: char.name });
-
         if (exists) {
           skipped++;
         } else {
@@ -377,37 +292,24 @@ if (message.content.startsWith(prefix + "addcard")) {
           added++;
         }
       }
-
-      message.reply(
-        `**Database Update Complete!**\n` +
-          `✅ **Added:** ${added} new cards\n` +
-          `⏭️ **Skipped:** ${skipped} (Already existed)`
-      );
+      message.reply(`**Database Update Complete!**\n✅ **Added:** ${added}\n⏭️ **Skipped:** ${skipped}`);
     } catch (error) {
       console.error(error);
       message.reply("Error updating index: " + error.message);
     }
   }
-  //add mobs
-  if (
-    message.content === prefix + "addmob" &&
-    message.author.id === "490338110572331018"
-  ) {
+
+  if (commandName === prefix + "addmob" && message.author.id === ADMIN_ID) {
     try {
       const list = mobData.mobs;
-
-      if (!list || !Array.isArray(list)) {
-        return message.reply(
-          "❌ Error: Could not find an array in `./characters/mob.js`."
-        );
-      }
+      if (!list || !Array.isArray(list)) return message.reply("❌ Error: Could not find array.");
+      
       let added = 0;
       let skipped = 0;
       message.reply(`🔄 Processing ${list.length} enemies...`);
 
       for (const mob of list) {
         const exists = await Mobs.findOne({ enemyId: mob.enemyId });
-
         if (exists) {
           skipped++;
         } else {
@@ -415,315 +317,161 @@ if (message.content.startsWith(prefix + "addcard")) {
           added++;
         }
       }
-
-      message.reply(
-        `**Mobs Update Complete!**\n` +
-          `✅ **Added:** ${added} new mobs\n` +
-          `⏭️ **Skipped:** ${skipped} (Already existed)`
-      );
+      message.reply(`**Mobs Update Complete!**\n✅ **Added:** ${added}\n⏭️ **Skipped:** ${skipped}`);
     } catch (error) {
       console.error(error);
       message.reply("Error updating mobs: " + error.message);
     }
   }
 
-  // drop card
-  if (message.content === prefix + "dropcard") {
+  // Gameplay
+  if (commandName === prefix + "dropcard") {
     await dropCard(message);
   }
-
-  // view index
-if (message.content.startsWith(prefix + "index")) {
+  if (commandName === prefix + "index") {
     await indexCard(message);
-}
-
-  // info card global
-  if (message.content.startsWith(prefix + "info")) {
+  }
+  if (commandName === prefix + "info") {
     await infoCard(message);
   }
-
-  if (
-    message.content.startsWith(prefix + "profile") ||
-    message.content.startsWith(prefix + "p")
-  ) {
-    const args = message.content.trim().split(/ +/);
-    const cmd = args[0].toLowerCase();
-    if (cmd === prefix + "profile" || cmd === prefix + "p") {
-      await profile(message);
-    }
+  if (commandName === prefix + "profile" || commandName === prefix + "p") {
+    await profile(message);
   }
-  if (message.content.startsWith(prefix + "select")) {
+  if (commandName === prefix + "select") {
     await select(message);
   }
-  // HELP
-  if (message.content === prefix + "help") {
+  if (commandName === prefix + "help") {
     await help(message);
   }
-  if (message.content === prefix + "battle" || message.content === prefix + "bt") {
-    // No arguments needed for standard battle now
+  if (commandName === prefix + "battle" || commandName === prefix + "bt") {
     await startBattle(message);
   }
-
-  // SKIP BATTLE COMMAND (!sbt or !skipbattle)
- if (message.content.startsWith(prefix + "sbt") || message.content.startsWith(prefix + "skipbattle")) {
-    const args = message.content.split(" ");
-    const times = args[1] ? args[1] : 1; 
-
+  if (commandName === prefix + "sbt" || commandName === prefix + "skipbattle") {
+    const times = args[1] ? args[1] : 1;
     await skipBattle(message, times);
-}
-  // add gold to demo gacha
-  if (message.content.startsWith(prefix + "addgold")) {
-    if (message.author.id !== "490338110572331018") {
-      return message.reply("Nice try. You aren't the admin.");
-    }
-    const args = message.content.split(" ");
-    const amount = parseInt(args[1]); // Grab index 1 ("500")
-    if (isNaN(amount)) {
-      return message.reply(
-        "Please provide a valid number (e.g., `!addgold 100`)."
-      );
-    }
+  }
+  if (commandName === prefix + "gacha") {
+    await banners(message);
+  }
+  if (commandName === prefix + "shop") {
+    await shop(message);
+  }
+  if (commandName === prefix + "useitem") {
+    await useitem(message);
+  }
+  if (commandName === prefix + "buy") {
+    await buy(message);
+  }
+  if (commandName === prefix + "mindex") {
+    await mobIndex(message);
+  }
+  if (commandName === prefix + "minfo") {
+    await mobInfo(message);
+  }
+  if (commandName === prefix + "dungeon") {
+    await dungeonHub(message);
+  }
+  if (commandName === prefix + "area") {
+    await areaDetails(message);
+  }
+  if (commandName === prefix + "stage") {
+    await stageDetails(message);
+  }
+  if (commandName === prefix + "next" && args[1] === "stage" || commandName === prefix + "next" && args[1] === "st") {
+    await nextStage(message);
+  }
+
+  // Admin Cheats
+  if (commandName === prefix + "addgold" && message.author.id === ADMIN_ID) {
+    const amount = parseInt(args[1]);
+    if (isNaN(amount)) return message.reply("Please provide a valid number.");
 
     try {
-      const userId = message.author.id;
-      let user = await UserContainer.findOne({ userId });
+      const user = await UserContainer.findOne({ userId: message.author.id });
       if (user) {
         user.gold += amount;
         user.gem += amount;
         await user.save();
-        message.reply(
-          `✅ Success! Added **${amount}** gold and gem. New Balance: **${user.gold}**`
-        );
+        message.reply(`✅ Added **${amount}** gold/gem.`);
       } else {
-        message.reply("You don't have an account! Type `!create` first.");
+        message.reply("Create account first.");
       }
     } catch (error) {
       console.error(error);
-      message.reply("Error adding gold.");
     }
   }
-  // display pity
-  if (message.content === prefix + "pity") {
-    await pity(message);
-  }
-  // display gem
-  if (message.content === prefix + "gem") {
-    await gem(message);
-  }
-  if (message.content === prefix + "gacha") {
-    await banners(message);
-  }
-  //shop
-  if (message.content === prefix + "shop") {
-    await shop(message);
-  }
 
-  //buy
-  if (message.content.startsWith(prefix + "buy")) {
-    await buy(message);
-  }
-  //mobs
-  if (message.content === prefix + "mindex") {
-    await mobIndex(message);
-  }
-  if (message.content.startsWith(prefix + "minfo")) {
-    await mobInfo(message);
-  }
-  //dungeon
-  if (message.content === prefix + "dungeon") {
-    await dungeonHub(message);
-  }
-
-  if (message.content.startsWith(prefix + "area")) {
-    await areaDetails(message);
-  }
-
-  if (message.content.startsWith(prefix + "stage")) {
-    await stageDetails(message);
-  }
-  //dungeon reeset
-  if (message.content === prefix + "resetdun") {
-    // Optional: Add admin check here
-    // if (message.author.id !== "YOUR_ADMIN_ID") return;
+  if (commandName === prefix + "resetdun") {
     try {
       const user = await UserContainer.findOne({ userId: message.author.id });
-      if (!user) return message.reply("User not found.");
-
-      user.dungeon = {
-        maxArea: 1,
-        maxStage: 1,
-        currentArea: 0,
-        currentStage: 0,
-      };
-
-      await user.save();
-      message.reply("🔄 **Dungeon progress has been reset to default.**");
-    } catch (err) {
-      console.error(err);
-      message.reply("Error resetting dungeon.");
-    }
+      if (user) {
+        user.dungeon = { maxArea: 1, maxStage: 1, currentArea: 0, currentStage: 0 };
+        await user.save();
+        message.reply("🔄 Dungeon progress reset.");
+      }
+    } catch (err) { console.error(err); }
   }
-  if (
-    message.content === prefix + "next stage" ||
-    message.content === prefix + "next st"
-  ) {
-    await nextStage(message);
-  }
-  // add ticket admin
-  if (message.content.startsWith("!addticket")) {
-    if (message.author.id !== "490338110572331018") {
-      return message.reply("Nice try diddy. Admin only.");
-    }
 
+  if (commandName === prefix + "addticket" && message.author.id === ADMIN_ID) {
     try {
-      const toUser = message.mentions.users.first();
-      const args = message.content.split(" ");
+      const toUser = message.mentions.users.first() || message.author;
       const targetUserId = toUser.id;
       const AMOUNT = parseInt(args[2]) || 10;
-      const user = await UserContainer.findOne({ userId: targetUserId });
-      if (!user) {
-        await UserContainer.create({
-          userId: targetUserId,
-          gold: 5000,
-          gem: 0,
-          stam: 70,
-          stamCap: 70,
-          level: 1,
-          xp: 0,
-          pity: 0,
-          lastHourly: null,
-          selectedCard: null,
-        });
-      }
+
+      let user = await UserContainer.findOne({ userId: targetUserId });
+      if (!user) user = await UserContainer.create({ userId: targetUserId });
 
       let inv = await Inventory.findOne({ userId: targetUserId });
-      if (!inv) {
-        inv = await Inventory.create({ userId: targetUserId, items: [] });
-      }
+      if (!inv) inv = await Inventory.create({ userId: targetUserId, items: [] });
 
-      const ITEMS_TO_ADD = ["ticket", "tide", "tape", "fate", "pass", "permit"];
+      user.gold += 99999999;
+      user.gem += 10000;
+      const ITEMS = ["ticket", "tide", "tape", "fate", "pass", "permit"];
 
-      ITEMS_TO_ADD.forEach((targetItemId) => {
-        const itemIndex = inv.items.findIndex((i) => i.itemId === targetItemId);
-
-        if (itemIndex > -1) {
-          inv.items[itemIndex].amount += AMOUNT;
-        } else {
-          inv.items.push({ itemId: targetItemId, amount: AMOUNT });
-        }
+      ITEMS.forEach((id) => {
+        const item = inv.items.find((i) => i.itemId === id);
+        if (item) item.amount += AMOUNT;
+        else inv.items.push({ itemId: id, amount: AMOUNT });
       });
 
+      await user.save();
       await inv.save();
-
-      const targetName = args[1] ? `User \`${targetUserId}\`` : "your account";
-      message.reply(
-        `✅ **Success!** Added ${AMOUNT}x Tickets, Tides, and Tapes to ${targetName}.`
-      );
+      message.reply(`✅ Added tickets & currency to ${toUser.tag}.`);
     } catch (error) {
       console.error(error);
-      message.reply("Something went wrong adding tickets.");
     }
   }
-  // del all accounts
-  if (message.content === "!dacc") {
-    if (message.author.id !== "490338110572331018") {
-      return message.reply("Only the bot owner can wipe the database.");
-    }
 
-    try {
-      const result = await UserContainer.deleteMany({});
-
-      message.reply(
-        `Success. Deleted ${result.deletedCount} accounts from the database.`
-      );
-    } catch (err) {
-      console.error(err);
-      message.reply("Failed to delete accounts. Check the console for errors.");
-    }
+  if (commandName === prefix + "dacc" && message.author.id === ADMIN_ID) {
+    const res = await UserContainer.deleteMany({});
+    message.reply(`Deleted ${res.deletedCount} accounts.`);
   }
-  // del index
-  if (message.content === "!dindex") {
-    if (message.author.id !== "490338110572331018") {
-      return message.reply("Only the bot owner can wipe the database.");
-    }
-
-    try {
-      const result = await Index.deleteMany({});
-
-      message.reply(
-        `Success. Deleted ${result.deletedCount} index cards from the database.`
-      );
-    } catch (err) {
-      console.error(err);
-      message.reply(
-        "Failed to delete index cards. Check the console for errors."
-      );
-    }
+  if (commandName === prefix + "dindex" && message.author.id === ADMIN_ID) {
+    const res = await Index.deleteMany({});
+    message.reply(`Deleted ${res.deletedCount} index entries.`);
   }
-  // del all cards
-  if (message.content === "!dall") {
-    if (message.author.id !== "490338110572331018") {
-      return message.reply("Only the bot owner can wipe the database.");
-    }
-
-    try {
-      const result = await Cards.deleteMany({});
-
-      message.reply(
-        `Success. Deleted ${result.deletedCount} cards from the database.`
-      );
-    } catch (err) {
-      console.error(err);
-      message.reply("Failed to delete cards. Check the console for errors.");
-    }
+  if (commandName === prefix + "dall" && message.author.id === ADMIN_ID) {
+    const res = await Cards.deleteMany({});
+    message.reply(`Deleted ${res.deletedCount} cards.`);
   }
-  // del all inv
-  if (message.content === "!dinv") {
-    if (message.author.id !== "490338110572331018") {
-      return message.reply("Only the bot owner can wipe the database.");
-    }
-
-    try {
-      const result = await Inventory.deleteMany({});
-
-      message.reply(
-        `Success. Deleted ${result.deletedCount} invs from the database.`
-      );
-    } catch (err) {
-      console.error(err);
-      message.reply("Failed to delete inv. Check the console for errors.");
-    }
+  if (commandName === prefix + "dinv" && message.author.id === ADMIN_ID) {
+    const res = await Inventory.deleteMany({});
+    message.reply(`Deleted ${res.deletedCount} inventories.`);
   }
-  //del mobs
-  if (message.content === "!dmob") {
-    if (message.author.id !== "490338110572331018") {
-      return message.reply("Only the bot owner can wipe the database.");
-    }
-
-    try {
-      const result = await Mobs.deleteMany({});
-
-      message.reply(
-        `Success. Deleted ${result.deletedCount} mobs from the database.`
-      );
-    } catch (err) {
-      console.error(err);
-      message.reply("Failed to delete mobs. Check the console for errors.");
-    }
+  if (commandName === prefix + "dmob" && message.author.id === ADMIN_ID) {
+    const res = await Mobs.deleteMany({});
+    message.reply(`Deleted ${res.deletedCount} mobs.`);
   }
-  if (message.content === prefix + "adminstam") {
-    const id = message.author.id;
-    const user = await UserContainer.findOne({ userId : id });
+  if (commandName === prefix + "adminstam" && message.author.id === ADMIN_ID) {
+    const user = await UserContainer.findOne({ userId: message.author.id });
     if (user) {
       user.stam += 100;
-      user.save();
-            message.reply(`done`)
-    } else {
-      message.reply(`error`)
+      await user.save();
+      message.reply("Stamina added.");
     }
   }
 });
 
 client.login(token).catch((error) => {
-  console.error("❌ Failed to log in to Discord: !!", error.message);
+  console.error("❌ Failed to log in to Discord:", error.message);
 });

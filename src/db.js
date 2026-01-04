@@ -40,6 +40,7 @@ const UserSchema = new mongoose.Schema({
   stamCap: { type: Number, default: 60 },
   lastHourly: { type: Date, default: null },
   lastDaily: { type: Date, default: null },
+  lastWeekly: { type: Date, default: null },
   level: { type: Number, default: 1 },
   xp: { type: Number, default: 0 },
   pity: { type: Number, default: 0 },

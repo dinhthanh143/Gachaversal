@@ -16,7 +16,9 @@ extra:
 miyabi - spd scale
 galbrena - hp scale
 
-
+=========================
+card sorting: 
+useitem, view, select, invcard
 stats : dropcard/pullsystem
 scaling:
 cards: 0.03/level

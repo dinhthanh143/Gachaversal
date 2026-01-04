@@ -139,7 +139,7 @@ const miyabi = {
     icon: "<:miyabi_skill:1447562052771123323>",
     name: "Judgement Cut",
     description:
-      "Marks the target with a silent slash. After 2 turns, the mark detonates, dealing {0} × SPD as **True Damage**.",
+      "Marks the target with a silent slash. After 2 turns, the mark detonates, dealing {0} × ATK as **True Damage**.",
     values: [[1.1, 1.2, 1.3, 1.5, 1.7, 1.9]],
   },
   image:
@@ -466,10 +466,14 @@ const amiya = {
     def: 72,
   },
   skill: {
-    icon: "",
-    name: "",
-    description: "",
-    values: [[]],
+    icon: "<:amiya_skill:1457210609258070036>",
+    name: "Arts Convergence",
+    description:
+      "Channels the power of Originium Arts, firing concentrated shots that deal {0}% ATK as damage and drain {1} Energy of the target.",
+    values: [
+      [105, 108, 111, 114, 117, 121],
+      [10, 12, 14, 16, 20, 25],
+    ],
   },
   image:
     "https://res.cloudinary.com/pachi/image/upload/v1767458551/ce0eba0ab4c62466a6c058fb72b38c96_relmyx.jpg",
@@ -481,20 +485,24 @@ const wisadel = {
   franchise: "Arknights",
   type: "Dark 🌙",
   stats: {
-    atk: 92,
-    hp: 62,
-    speed: 78,
-    def: 55,
+    atk: 86,
+    hp: 67,
+    speed: 80,
+    def: 59,
   },
   skill: {
-    icon: "",
-    name: "",
-    description: "",
-    values: [[]],
+    icon: "<:w_skill:1457218706731171840>",
+    name: "BANG!",
+    description:
+      "Upon activation, Wisadel stores 5 Explosive Ammos and consumes one each time she attacks. Each ammo consumed increases her ATK by {0}% and Crit Rate by {1}%. The buffs end after she uses up all her Ammos.",
+    values: [
+      [4, 5, 6, 7, 8, 10], // ATK % (was 8-18)
+      [4, 5, 6, 7, 8, 9], // Crit Rate % (was 5-10)
+    ],
   },
   image:
     "https://res.cloudinary.com/pachi/image/upload/v1767459025/37239f0f7f676c94155741e5b913b225_mvymoz.jpg",
-  cardColor: "#cc2c08",
+  cardColor: "#7a1c02",
 };
 
 const yuzuha = {
@@ -503,16 +511,20 @@ const yuzuha = {
   franchise: "Zenless Zone Zero",
   type: "Neutral ✨",
   stats: {
-    atk: 68, 
-    hp: 75, 
-    speed: 82, 
-    def: 64, 
+    atk: 68,
+    hp: 75,
+    speed: 82,
+    def: 64,
   },
   skill: {
-    icon: "",
-    name: "",
-    description: "",
-    values: [[]],
+    icon: "<:yuzuha_skill:1457214067638009956>",
+    name: "Sugar Rush",
+    description:
+      "Yuzuha sweetly invigorates herself, increasing ATK by {0}% and Energy regeneration by {1}% for 3 turns. The duration resets everytime she uses her skill, this effect can stack up to 2 times.",
+    values: [
+      [12, 14, 16, 18, 20, 22],
+      [10, 12, 14, 16, 18, 20],
+    ],
   },
   image:
     "https://res.cloudinary.com/pachi/image/upload/v1767459013/6d474d90e1557b32084db830752f1b98_dcjwno.jpg",

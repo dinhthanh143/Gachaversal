@@ -4,15 +4,15 @@ const { EmbedBuilder } = require("discord.js");
 // ✅ Helper function to scale Cloudinary images or handle placeholders
 function formatImage(url, width, height) {
   if (!url) return null;
-  
+
   if (url.includes("res.cloudinary.com")) {
     return url.replace("/upload/", `/upload/w_${width},h_${height},c_fill/`);
   }
-  
+
   if (url.includes("via.placeholder.com")) {
     return `https://via.placeholder.com/${width}x${height}?text=Mob`;
   }
-  
+
   return url;
 }
 
@@ -40,7 +40,6 @@ async function infoCard(message) {
 
     // Check if values exist and iterate through them
     if (pokemon.skill.values && pokemon.skill.values.length > 0) {
-      
       pokemon.skill.values.forEach((valueArray, index) => {
         // Ensure it is actually an array (handle the [[...]] structure)
         if (Array.isArray(valueArray) && valueArray.length > 0) {
@@ -61,13 +60,13 @@ async function infoCard(message) {
       });
     }
     // ====================================================
- 
+
     // -- Image Scaling --
     const scaledImage = formatImage(pokemon.image, 250, 400);
 
     const embed = new EmbedBuilder()
-      .setColor(pokemon.cardColor || "#ffffff") 
-      .setTitle(`${pokemon.name} ${pokemon.type.split(" ")[1] || ""}`) 
+      .setColor(pokemon.cardColor || "#ffffff")
+      .setTitle(`${pokemon.name} ${pokemon.type.split(" ")[1] || ""}`)
       .setAuthor({
         name: `${message.author.username}`,
         iconURL: message.author.displayAvatarURL({ dynamic: true }),
@@ -79,10 +78,11 @@ async function infoCard(message) {
             `**Global ID:** ${pokemon.pokeId}\n` +
             `**Franchise:** ${pokemon.franchise}\n` +
             `**Type:** ${pokemon.type}\n` +
-            `**ATK:** ${pokemon.stats.atk}\n` +
-            `**HP:** ${pokemon.stats.hp}\n` +
-            `**Speed:** ${pokemon.stats.speed}\n` +
-            `**Defense:** ${pokemon.stats.def}`,
+            `**Base Stats:**\n` +
+            `⚔️ **ATK:** ${pokemon.stats.atk}\n` +
+            `🩸 **HP:** ${pokemon.stats.hp}\n` +
+            `💨 **SPD:** ${pokemon.stats.speed}\n` +
+            `🛡️ **DEF:** ${pokemon.stats.def}`,
         },
         {
           name: `Skill: ${pokemon.skill.name} ${pokemon.skill.icon || ""}`,

@@ -31,8 +31,6 @@ async function shop(message) {
 
     // 2. Fetch Inventory
     let inv = await Inventory.findOne({ userId });
-    const getOwnedCount = (id) =>
-      inv ? inv.items.find((i) => i.itemId === id)?.amount || 0 : 0;
 
     // 3. Pagination
     const pageSize = 5;
@@ -63,12 +61,11 @@ async function shop(message) {
 
       if (currentItems.length > 0) {
         currentItems.forEach((item) => {
-          const owned = getOwnedCount(item.itemId);
           const currencyIcon = item.currency === "gem" ? "💎" : "💰";
 
           embed.addFields({
             name: `${item.emoji} ${item.name} \`(${item.itemId})\``,
-            value: `> 🏷️ Price: **${item.price}** ${currencyIcon}\n> 🎒 In Bag: **${owned}**\n${LINE_THIN}`,
+            value: `> 🏷️ Price: **${item.price}** ${currencyIcon}\n${LINE_THIN}`,
             inline: false,
           });
         });
