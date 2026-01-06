@@ -8,9 +8,7 @@ updated scaling system and display system
 balanced cards data
 ==================================
 to-do:
-miyabi spd => atk scale
-card drop after battling
-better sorting system cards user
+stamina for each battle (scaled off threat level)
 ==================================
 extra:
 miyabi - spd scale
@@ -20,10 +18,12 @@ galbrena - hp scale
 card sorting: 
 useitem, view, select, invcard
 stats : dropcard/pullsystem
+=========================
 scaling:
 cards: 0.03/level
 mobs: 0.03/level
-
-lower enemy skill scale
-
+=========================
+default skill
+strike : power strike
+buffs (atk, def) : xxx
 

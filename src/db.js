@@ -62,7 +62,9 @@ const UserSchema = new mongoose.Schema({
 // 3. USER CARD
 const userCardSchema = new mongoose.Schema({
   ownerId: { type: String, required: true, index: true },
-  cardId: { type: Number, required: true }, // Links to pokeId in Index
+  cardId: { type: Number, required: true },
+  ascension :{ type: Number, default : 0 } ,
+  uid: { type: Number, index: true },
   fav: {type: Boolean , default : false},
   stats: {
     atk: Number,
@@ -127,7 +129,24 @@ const EnemySchema = new mongoose.Schema({
     drops: [{ itemId: String, chance: Number }],
   },
 });
-
+//trade
+const TradeSchema = new mongoose.Schema({
+  senderId: { type: String, required: true },
+  receiverId: { type: String, required: true },
+  offers: {
+    sender: {
+      confirmed: { type: Boolean, default: false },
+      cards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Cards' }],
+      items: [{ itemId: String, amount: Number }]
+    },
+    receiver: {
+      confirmed: { type: Boolean, default: false },
+      cards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Cards' }],
+      items: [{ itemId: String, amount: Number }]
+    }
+  },
+  createdAt: { type: Date, default: Date.now, expires: 600 } 
+});
 // Tell Mongoose to actually use this virtual
 userCardSchema.set("toObject", { virtuals: true });
 userCardSchema.set("toJSON", { virtuals: true });
@@ -139,7 +158,7 @@ const Cards = mongoose.model("Cards", userCardSchema, "cards");
 const Inventory = mongoose.model("Inventory", InventorySchema, "inventory");
 const SBanner = mongoose.model("SpecificBanner", SpecificBanner, "sbanner");
 const Mobs = mongoose.model("Mobs", EnemySchema, "mobs");
-
+const Trade = mongoose.model("Trade", TradeSchema, "trades");
 module.exports = {
   connectDB,
   UserContainer,
@@ -148,4 +167,5 @@ module.exports = {
   Inventory,
   SBanner,
   Mobs,
+  Trade
 };

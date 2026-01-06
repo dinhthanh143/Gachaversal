@@ -35,13 +35,12 @@ function calculateDamage(attacker, defender, rawDamage, isCrit = false) {
   const defStat = defender.stats ? defender.stats.def : 0;
   const defenseFactor = 100 / (100 + defStat);
   const finalDamage = Math.max(1, Math.floor(effectiveDamage * defenseFactor));
-  
+
   let suffix = "";
-  if (isCrit) suffix += " (CRIT!)";
   if (typeMult > 1.0) suffix += "\nIt was SUPER EFFECTIVE!";
   else if (typeMult < 1.0) suffix += "\nIt wasn't very effective...";
   if (damageMultiplier > 1.0) suffix += " (Counter-Boosted!)";
-  
+
   return { damage: finalDamage, suffix };
 }
 
@@ -69,54 +68,208 @@ function handleDeathPrevention(unit) {
 
   let log = "";
   // 1. Check for Active Zombie Mode (Already triggered)
-  const activeDeathState = unit.effects.find(e => e.stat === "zombieState");
-  
+  const activeDeathState = unit.effects.find((e) => e.stat === "zombieState");
+
   if (activeDeathState) {
-     unit.stats.hp = 1; // Refuse to die
-     log = `\n**${unit.name}** is anchored to the Death Kingdom and refuses to die!`;
-  } 
+    unit.stats.hp = 1; // Refuse to die
+    log = `\n**${unit.name}** is anchored to the Death Kingdom and refuses to die!`;
+  }
   // 2. Check for Ward (First time trigger)
   else {
-     const wardIndex = unit.effects.findIndex(e => e.stat === "cheatDeath");
-     if (wardIndex !== -1) {
-       const ward = unit.effects[wardIndex];
-       
-       // Consume Ward
-       unit.effects.splice(wardIndex, 1);
-       
-       // Calculate ATK Boost (MaxHP * Value%)
-       const atkBoostPercent = ward.extra || 1;
-       const atkGain = Math.floor(unit.maxHp * (atkBoostPercent / 100));
-       
-       // Apply Zombie State (3 Turns)
-       addBuff(unit, "Death Kingdom", "zombieState", 1, 3);
-       
-       // Apply ATK Buff
-       addBuff(unit, "Queen's Wrath", "atk", atkGain, 3);
-       if (unit.stats.atk !== undefined) unit.stats.atk += atkGain;
+    const wardIndex = unit.effects.findIndex((e) => e.stat === "cheatDeath");
+    if (wardIndex !== -1) {
+      const ward = unit.effects[wardIndex];
 
-       // Save Life
-       unit.stats.hp = 1;
-       log = `\n**${unit.name}** enters the **Death Kingdom**! (Invulnerable for 3 turns)\nGained **+${atkGain} ATK**!`;
-     }
+      // Consume Ward
+      unit.effects.splice(wardIndex, 1);
+
+      // Calculate ATK Boost (MaxHP * Value%)
+      const atkBoostPercent = ward.extra || 1;
+      const atkGain = Math.floor(unit.maxHp * (atkBoostPercent / 100));
+
+      // Apply Zombie State (3 Turns)
+      addBuff(unit, "Death Kingdom", "zombieState", 1, 3);
+
+      // Apply ATK Buff
+      addBuff(unit, "Queen's Wrath", "atk", atkGain, 3);
+      if (unit.stats.atk !== undefined) unit.stats.atk += atkGain;
+
+      // Save Life
+      unit.stats.hp = 1;
+      log = `\n**${unit.name}** enters the **Death Kingdom**! (Invulnerable for 3 turns)\nGained **+${atkGain} ATK**!`;
+    }
   }
   return log;
 }
 
+function checkPreAttackPassives(attacker) {
+    let log = "";
+
+    // --- WISADEL AMMO LOGIC ---
+    if (attacker.name === "Wisadel") {
+        const ammoBuff = attacker.effects ? attacker.effects.find(e => e.name === "Explosive Ammo") : null;
+        
+        if (ammoBuff && ammoBuff.amount > 0) {
+            ammoBuff.amount -= 1; // Consume
+
+            // Skill Values
+            const vals = attacker.skill.values || [[4], [4]];
+            const atkInc = (Array.isArray(vals[0]) ? vals[0][0] : vals[0]) || 4;
+            const critInc = (Array.isArray(vals[1]) ? vals[1][0] : vals[1]) || 4;
+
+            // Calculate Boost
+            const atkBoost = Math.floor(attacker.stats.atk * (atkInc / 100)); 
+            
+            // Apply Buffs
+            let statBuff = attacker.effects.find(e => e.name === "Wisadel Buff");
+            let currentStack = 1;
+
+            if (!statBuff) {
+                // Stack 1
+                addBuff(attacker, "Wisadel Buff", "atk", atkBoost, 999, 1);
+                addBuff(attacker, "Wisadel Buff", "critRate", critInc, 999, 1);
+            } else {
+                // Stack 2+
+                const buffs = attacker.effects.filter(e => e.name === "Wisadel Buff");
+                currentStack = (statBuff.extra || 1) + 1;
+                buffs.forEach(b => {
+                    b.extra = currentStack; 
+                    if (b.stat === "atk") { 
+                        b.amount += atkBoost; 
+                        attacker.stats.atk += atkBoost; 
+                    }
+                    if (b.stat === "critRate") { 
+                        b.amount += critInc; 
+                        attacker.stats.critRate += critInc; 
+                    }
+                });
+            }
+
+            // Read Totals for Display
+            const totalAtk = attacker.effects.find(e => e.name === "Wisadel Buff" && e.stat === "atk").amount;
+            const totalCrit = attacker.effects.find(e => e.name === "Wisadel Buff" && e.stat === "critRate").amount;
+
+            log = `🧨 **Wisadel** uses an ammo! (Left: **${ammoBuff.amount}**)\n` + 
+                  `Raises ATK by **${totalAtk}** (Total) and Crit Rate by **${totalCrit}%** (Total)!`;
+        }
+    }
+
+    return log;
+}
 // =========================================
 // 4. SKILL DEFINITIONS
 // =========================================
 const Skills = {
+  "BANG!": {
+    initialEnergy: 175,
+    requiredEnergy: 225,
+    name: "BANG!",
+    icon: "<:w_skill:1457218706731171840>",
+    description: "Loads 5 Explosive Ammos.",
+    execute: (attacker, defender, skillValues) => {
+      addBuff(attacker, "Explosive Ammo", "ammoCount", 5, 999);
+      return { damage: 0, log: `**${attacker.name}** activates **BANG!**\nReloaded **5 Explosive Ammos**!` };
+    },
+  },
+
+  "Sugar Rush": {
+    initialEnergy: 50,
+    requiredEnergy: 100,
+    name: "Sugar Rush",
+    icon: "<:yuzuha_skill:1457214067638009956>",
+    description: "Increases ATK and Energy Regen.",
+    execute: (attacker, defender, skillValues = [[12], [10]]) => {
+      const atkPct = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 12;
+      const erPct = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 10;
+      const calcAtkBoost = Math.floor(attacker.stats.atk * (atkPct / 100));
+      const existing = attacker.effects.find(e => e.name === "Sugar Rush");
+
+      if (!existing) {
+        addBuff(attacker, "Sugar Rush", "atk", calcAtkBoost, 5, 1); 
+        addBuff(attacker, "Sugar Rush", "energyRegen", erPct, 5, 1);
+        return { damage: 0, log: `**${attacker.name}** uses **Sugar Rush**! (Stack 1)\nATK increased by **${calcAtkBoost}** & Energy Regen by **${erPct}%**!` };
+      } else {
+        const allBuffs = attacker.effects.filter(e => e.name === "Sugar Rush");
+        let stack = existing.extra || 1;
+        let log = "";
+        if (stack < 2) {
+          stack++;
+          attacker.stats.atk += calcAtkBoost; 
+          allBuffs.forEach(e => {
+            e.turns = 5; 
+            e.extra = stack; 
+            if (e.stat === "atk") e.amount += calcAtkBoost;
+            if (e.stat === "energyRegen") e.amount += erPct;
+          });
+          log = `**${attacker.name}** uses **Sugar Rush**! (Stack ${stack})\nBuffs stacked and duration reset!`;
+        } else {
+          allBuffs.forEach(e => e.turns = 5);
+          log = `**${attacker.name}** uses **Sugar Rush**! (Max Stacks)\nDuration refreshed!`;
+        }
+        return { damage: 0, log };
+      }
+    },
+  },
+  "Arts Convergence": {
+    initialEnergy: 50,
+    requiredEnergy: 100,
+    name: "Arts Convergence",
+    icon: "<:amiya_skill:1457210609258070036>",
+    description:
+      "Channels Originium Arts to deal DMG and drain target's Energy.",
+    execute: (attacker, defender, skillValues = [[105], [10]]) => {
+      // 1. Extract Values
+      const dmgPercent =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        105;
+      const drainAmount =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        10;
+
+      // 2. Damage Calculation
+      const rawDamage = attacker.stats.atk * (dmgPercent / 100);
+      const { damage, suffix } = calculateDamage(attacker, defender, rawDamage);
+      defender.stats.hp -= damage;
+
+      // 3. Energy Drain Logic (Steal)
+      const targetCurrentEnergy = defender.energy || 0;
+      // We can only drain what they actually have
+      const actualDrain = Math.min(targetCurrentEnergy, drainAmount);
+ 
+      defender.energy -= actualDrain;
+
+      // 4. Log Generation
+      let log = `**${attacker.name}** channels **Arts Convergence**! Dealt **${damage}** DMG!${suffix}`;
+
+      if (actualDrain > 0) {
+        log += `\nDrained **${actualDrain}** Energy from **${defender.name}**!`;
+      } else {
+        log += `\n(Target had no Energy to drain)`;
+      }
+
+      // 5. Triggers
+      log += handleDamageStorage(defender, damage);
+      log += handleDeathPrevention(defender);
+
+      return { damage, log };
+    },
+  },
   "Queen of the Death Kingdom [PASSIVE]": {
     initialEnergy: 0,
     requiredEnergy: 999,
     name: "Queen of the Death Kingdom [PASSIVE]",
     icon: "<:castorice_skill:1457011310767243405>",
-    description: "Upon receiving fatal damage, prevents death and enters 'Death Kingdom' state for 3 turns.",
+    description:
+      "Upon receiving fatal damage, prevents death and enters 'Death Kingdom' state for 3 turns.",
     execute: (attacker, defender, skillValues = [[1]]) => {
-      const atkPercent = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 1;
+      const atkPercent =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        1;
       addBuff(attacker, "Death Kingdom Ward", "cheatDeath", 1, 999, atkPercent);
-      return { damage: 0, log: `**${attacker.name}** is protected by the **Death Kingdom**.` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** is protected by the **Death Kingdom**.`,
+      };
     },
   },
 
@@ -125,22 +278,29 @@ const Skills = {
     requiredEnergy: 100,
     name: "Havoc of the Abyss",
     icon: "<:skirk_skill:1456936895115427860>",
-    description: "Deals Ice DMG and reduces Speed. If already slowed, deals extra HP% damage.",
+    description:
+      "Deals Ice DMG and reduces Speed. If already slowed, deals extra HP% damage.",
     execute: (attacker, defender, skillValues = [[90], [6]]) => {
-      const dmgPercent = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 90;
-      const extraHpPercent = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 6;
-      
+      const dmgPercent =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        90;
+      const extraHpPercent =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        6;
+
       const rawDamage = attacker.stats.atk * (dmgPercent / 100);
       const { damage, suffix } = calculateDamage(attacker, defender, rawDamage);
       defender.stats.hp -= damage;
-      
+
       let log = `**${attacker.name}** uses **Havoc of the Abyss**! Dealt **${damage}** Ice DMG!${suffix}`;
       log += handleDamageStorage(defender, damage);
       log += handleDeathPrevention(defender); // ✅ Death Check
 
       let alreadySlowed = false;
       if (defender.effects) {
-        const speedDebuff = defender.effects.find((e) => e.stat === "speed" && e.amount < 0);
+        const speedDebuff = defender.effects.find(
+          (e) => e.stat === "speed" && e.amount < 0
+        );
         if (speedDebuff) alreadySlowed = true;
       }
 
@@ -151,7 +311,7 @@ const Skills = {
         log += handleDamageStorage(defender, extraDmg);
         log += handleDeathPrevention(defender); // ✅ Death Check
       }
-      
+
       const speedReduction = Math.floor(defender.stats.speed * 0.25);
       addBuff(defender, "Abyssal Chill", "speed", -speedReduction, 5);
       log += `\n**${defender.name}**'s Speed reduced by **${speedReduction}** for 4 turns!`;
@@ -167,9 +327,14 @@ const Skills = {
     icon: "<:doctor_skill:1457010478885634062>",
     description: "Heals {0}% Max HP at the start of every turn for 3 turns.",
     execute: (attacker, defender, skillValues = [5]) => {
-      const healPercent = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 5;
+      const healPercent =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        5;
       addBuff(attacker, "Medic Protocol", "medicRegen", healPercent, 3);
-      return { damage: 0, log: `**${attacker.name}** activates **Medic Protocol**!\nHealing systems initialized for 3 turns.` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** activates **Medic Protocol**!\nHealing systems initialized for 3 turns.`,
+      };
     },
   },
 
@@ -178,9 +343,12 @@ const Skills = {
     requiredEnergy: 100,
     name: "Eternal Execution",
     icon: "<:raiden_skill:1456922691411120170>",
-    description: "Consumes 25-100% Energy to deal Electro DMG based on consumption.",
+    description:
+      "Consumes 25-100% Energy to deal Electro DMG based on consumption.",
     execute: (attacker, defender, skillValues = [1]) => {
-      const dmgPerPoint = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 1;
+      const dmgPerPoint =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        1;
       const consumed = Math.floor(Math.random() * (100 - 25 + 1)) + 25;
       const refund = 100 - consumed;
       attacker.energy += refund;
@@ -206,12 +374,18 @@ const Skills = {
     requiredEnergy: 100,
     name: "Heavenfall Accord",
     icon: "<:zhongli_skill:1456927829550829612>",
-    description: "Raises Defense by {0}% for 2 turns. On expiry, Stuns target for 1 turn.",
+    description:
+      "Raises Defense by {0}% for 2 turns. On expiry, Stuns target for 1 turn.",
     execute: (attacker, defender, skillValues = [20]) => {
-      const percent = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 20;
+      const percent =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        20;
       const boostAmount = Math.floor(attacker.stats.def * (percent / 100));
       addBuff(attacker, "Heavenfall Accord", "heavenfallDef", boostAmount, 3);
-      return { damage: 0, log: `**${attacker.name}** uses **Heavenfall Accord**!\nDefense increased by **${boostAmount}**! Meteor incoming...` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** uses **Heavenfall Accord**!\nDefense increased by **${boostAmount}**! Meteor incoming...`,
+      };
     },
   },
 
@@ -222,9 +396,14 @@ const Skills = {
     icon: "<:phainon_skill:1456918929531474001>",
     description: "Stores {0}% of damage received for 3 turns.",
     execute: (attacker, defender, skillValues = [[45]]) => {
-      const storePercent = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 45;
+      const storePercent =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        45;
       addBuff(attacker, "Echo of Calamity", "storeDmg", storePercent, 3, 0);
-      return { damage: 0, log: `**${attacker.name}** activates **Echo of Calamity**!\nAny damage taken will be stored and returned!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** activates **Echo of Calamity**!\nAny damage taken will be stored and returned!`,
+      };
     },
   },
 
@@ -233,11 +412,17 @@ const Skills = {
     requiredEnergy: 999,
     name: "Crimson Verdict [PASSIVE]",
     icon: "<:acheron_skill:1456918056013135990>",
-    description: "Attacks build Slashed Dream stacks. At 4 stacks, unleashes a guaranteed Crit slash.",
+    description:
+      "Attacks build Slashed Dream stacks. At 4 stacks, unleashes a guaranteed Crit slash.",
     execute: (attacker, defender, skillValues = [[20]]) => {
-      const dmgPerStack = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 20;
+      const dmgPerStack =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        20;
       addBuff(attacker, "Slashed Dream", "stack", 0, 999, dmgPerStack);
-      return { damage: 0, log: `**${attacker.name}** enters the battle with **Crimson Verdict** active!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** enters the battle with **Crimson Verdict** active!`,
+      };
     },
   },
 
@@ -246,12 +431,19 @@ const Skills = {
     requiredEnergy: 999,
     name: "Sword Of The Divine [PASSIVE]",
     icon: "<:ye_skill:1446822377101983787>",
-    description: "If Speed < Target: Gain Lifesteal. Else: Gain ATK & Crit Rate.",
+    description:
+      "If Speed < Target: Gain Lifesteal. Else: Gain ATK & Crit Rate.",
     execute: (attacker, defender, skillValues = [[17], [10], [8]]) => {
-      const lsVal = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 17;
-      const atkVal = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 10;
-      const critVal = (Array.isArray(skillValues[2]) ? skillValues[2][0] : skillValues[2]) || 8;
-      
+      const lsVal =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        17;
+      const atkVal =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        10;
+      const critVal =
+        (Array.isArray(skillValues[2]) ? skillValues[2][0] : skillValues[2]) ||
+        8;
+
       let log = "";
       if (attacker.stats.speed < defender.stats.speed) {
         addBuff(attacker, "Sword Of The Divine", "lifesteal", lsVal, 999);
@@ -259,10 +451,11 @@ const Skills = {
       } else {
         addBuff(attacker, "Sword Of The Divine", "atk", atkVal, 999);
         addBuff(attacker, "Sword Of The Divine", "critRate", critVal, 999);
-        
+
         if (attacker.stats.atk !== undefined) attacker.stats.atk += atkVal;
-        if (attacker.stats.critRate !== undefined) attacker.stats.critRate += critVal;
-        
+        if (attacker.stats.critRate !== undefined)
+          attacker.stats.critRate += critVal;
+
         log = `**${attacker.name}** is faster! Gained **+${atkVal} ATK** & **+${critVal}% Crit Rate**!`;
       }
       return { damage: 0, log };
@@ -276,7 +469,8 @@ const Skills = {
     icon: "👊",
     description: "Deals a powerful strike equals to {0}% of ATK damage.",
     execute: (attacker, defender, skillValues = [100]) => {
-      const percentage = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 100;
+      const percentage =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 100;
       const multiplier = percentage / 100;
       const rawDamage = attacker.stats.atk * multiplier;
       const { damage, suffix } = calculateDamage(attacker, defender, rawDamage);
@@ -297,14 +491,21 @@ const Skills = {
     icon: "<:herta_skill:1456549247611699200>",
     description: "Randomly sets enemy Energy.",
     execute: (attacker, defender, skillValues = [[0.6], [0.5]]) => {
-      const selfMult = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 0.6;
-      const enemyMult = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 0.5;
-      const cap = defender.skill && defender.skill.requiredEnergy ? defender.skill.requiredEnergy : 100;
-      
+      const selfMult =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        0.6;
+      const enemyMult =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        0.5;
+      const cap =
+        defender.skill && defender.skill.requiredEnergy
+          ? defender.skill.requiredEnergy
+          : 100;
+
       const oldEnergy = defender.energy || 0;
       const newEnergy = Math.floor(Math.random() * (cap + 1));
       defender.energy = newEnergy;
-      
+
       const gap = Math.abs(oldEnergy - newEnergy);
       const gapRatio = gap / cap;
       const gapPercent = Math.floor(gapRatio * 100);
@@ -315,12 +516,16 @@ const Skills = {
         attacker.stats.hp -= damage;
         log += `Gap: **${gapPercent}%** (Lost) ➔ **${attacker.name}** took **${damage}** self-damage!`;
         log += handleDeathPrevention(attacker); // ✅ Death Check (Self)
-      
       } else if (oldEnergy < newEnergy) {
         const rawIceDmg = Math.floor(attacker.maxHp * gapRatio * enemyMult);
-        const { damage, suffix } = calculateDamage(attacker, defender, rawIceDmg, false);
+        const { damage, suffix } = calculateDamage(
+          attacker,
+          defender,
+          rawIceDmg,
+          false
+        );
         defender.stats.hp -= damage;
-        
+
         log += `Gap: **${gapPercent}%** (Gained) ➔ **${defender.name}** received **${damage}** Ice DMG!${suffix}`;
         log += handleDamageStorage(defender, damage);
         log += handleDeathPrevention(defender); // ✅ Death Check (Enemy)
@@ -336,39 +541,62 @@ const Skills = {
     requiredEnergy: 75,
     name: "Tactical Overclock",
     icon: "<:chisa_skill:1446787026392190997>",
-    description: "Gains {0}% Crit Rate and +{1}% Speed per stack (max 3 stacks).",
+    description:
+      "Gains {0}% Crit Rate and +{1}% Speed per stack (max 3 stacks).",
     execute: (attacker, defender, skillValues = [[10], [1]]) => {
-      const critBase = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 10;
-      const spdBase = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 1;
-      
+      const critBase =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        10;
+      const spdBase =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        1;
+
       if (!attacker.effects) attacker.effects = [];
-      const critEff = attacker.effects.find((e) => e.name === "Tactical Overclock" && e.stat === "critRate");
-      const spdEff = attacker.effects.find((e) => e.name === "Tactical Overclock" && e.stat === "speed");
+      const critEff = attacker.effects.find(
+        (e) => e.name === "Tactical Overclock" && e.stat === "critRate"
+      );
+      const spdEff = attacker.effects.find(
+        (e) => e.name === "Tactical Overclock" && e.stat === "speed"
+      );
 
       if (!critEff) {
         addBuff(attacker, "Tactical Overclock", "critRate", critBase, 4, 1);
         addBuff(attacker, "Tactical Overclock", "speed", spdBase, 4, 1);
-        return { damage: 0, log: `**${attacker.name}** enters Overclock! (Stack 1)\nCurrently: **+${critBase}% Crit**, **+${spdBase} SPD**` };
+        return {
+          damage: 0,
+          log: `**${attacker.name}** enters Overclock! (Stack 1)\nCurrently: **+${critBase}% Crit**, **+${spdBase} SPD**`,
+        };
       }
-      
+
       let stacks = critEff.extra || 1;
       critEff.turns = 4;
       if (spdEff) spdEff.turns = 4;
-      
+
       if (stacks < 3) {
         stacks++;
         critEff.amount += critBase;
         if (spdEff) spdEff.amount += spdBase;
-        
-        if (attacker.stats.critRate !== undefined) attacker.stats.critRate += critBase;
+
+        if (attacker.stats.critRate !== undefined)
+          attacker.stats.critRate += critBase;
         if (attacker.stats.speed !== undefined) attacker.stats.speed += spdBase;
-        
+
         critEff.extra = stacks;
         if (spdEff) spdEff.extra = stacks;
-        
-        return { damage: 0, log: `**${attacker.name}** Overclock Rising! (Stack ${stacks})\nTotal: **+${critEff.amount}% Crit**, **+${spdEff ? spdEff.amount : 0} SPD**` };
+
+        return {
+          damage: 0,
+          log: `**${
+            attacker.name
+          }** Overclock Rising! (Stack ${stacks})\nTotal: **+${
+            critEff.amount
+          }% Crit**, **+${spdEff ? spdEff.amount : 0} SPD**`,
+        };
       }
-      return { damage: 0, log: `**${attacker.name}** Overclock Refreshed! (Max Stacks)` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** Overclock Refreshed! (Max Stacks)`,
+      };
     },
   },
 
@@ -379,12 +607,16 @@ const Skills = {
     icon: "<:carlotta_skill:1446787543092822027>",
     description: "Fires three searing shots.",
     execute: (attacker, defender, skillValues = [[0.3], [10]]) => {
-      const dmgMult = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 0.3;
-      const critChance = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 10;
+      const dmgMult =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        0.3;
+      const critChance =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        10;
       let totalDamage = 0;
       let critCount = 0;
       let typeSuffix = "";
-      
+
       for (let i = 0; i < 3; i++) {
         let rawHit = attacker.stats.atk * dmgMult;
         if (Math.random() * 100 < critChance) {
@@ -415,8 +647,12 @@ const Skills = {
     icon: "<:galbrena_skill:1446787462742409298>",
     description: "Fires incendiary rounds.",
     execute: (attacker, defender, skillValues = [[0.1], [25]]) => {
-      const damageMult = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 0.1;
-      const burnChance = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 25;
+      const damageMult =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        0.1;
+      const burnChance =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        25;
       const rawDamage = attacker.maxHp * damageMult;
       const { damage, suffix } = calculateDamage(attacker, defender, rawDamage);
       defender.stats.hp -= damage;
@@ -442,10 +678,14 @@ const Skills = {
     icon: "<:miyabi_skill:1447562052771123323>",
     description: "Marks target for delayed damage.",
     execute: (attacker, defender, skillValues = [1.1]) => {
-      const multiplier = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 1.1;
+      const multiplier =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 1.1;
       const trueDamage = Math.floor(attacker.stats.atk * multiplier);
       addBuff(defender, "Judgement Mark", "delayedDmg", trueDamage, 2);
-      return { damage: 0, log: `**${attacker.name}** uses **Judgement Cut**!\n**${defender.name}** is marked for 2 turns...` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** uses **Judgement Cut**!\n**${defender.name}** is marked for 2 turns...`,
+      };
     },
   },
 
@@ -456,11 +696,18 @@ const Skills = {
     icon: "<:yixuan_skill:1453672321306067110>",
     description: "Reduces incoming damage and prepares healing.",
     execute: (attacker, defender, skillValues = [[10], [4]]) => {
-      const reduction = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 10;
-      const healPercent = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 4;
+      const reduction =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        10;
+      const healPercent =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        4;
       addBuff(attacker, "Divine Shield", "dmgRed", reduction, 3);
       addBuff(attacker, "Divine Regen", "condRegen", healPercent, 3);
-      return { damage: 0, log: `**${attacker.name}** uses **Divine Foresight**!\nDecreases incoming DMG and prepares healing!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** uses **Divine Foresight**!\nDecreases incoming DMG and prepares healing!`,
+      };
     },
   },
 
@@ -471,9 +718,13 @@ const Skills = {
     icon: "<:rover_skill_gale:1446799294492311603>",
     description: "Reduces enemy's accuracy.",
     execute: (attacker, defender, skillValues = [15]) => {
-      const chance = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 15;
+      const chance =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 15;
       addBuff(defender, "Gale Disruption", "missChance", chance, 2);
-      return { damage: 0, log: `**${attacker.name}** uses **Gale Disruption**!\n**${defender.name}**'s accuracy reduced!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** uses **Gale Disruption**!\n**${defender.name}**'s accuracy reduced!`,
+      };
     },
   },
 
@@ -484,10 +735,14 @@ const Skills = {
     icon: "<:lappland_skill:1454368319686840341>",
     description: "Silences the target.",
     execute: (attacker, defender, skillValues = [5]) => {
-      const drainAmount = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 5;
+      const drainAmount =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 5;
       addBuff(defender, "Nocturnal Silence", "energyDrain", drainAmount, 2);
       addBuff(defender, "Silenced", "silence", 1, 2);
-      return { damage: 0, log: `**${attacker.name}** uses **Nocturnal Silence**!\n**${defender.name}** is **Silenced**!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** uses **Nocturnal Silence**!\n**${defender.name}** is **Silenced**!`,
+      };
     },
   },
 
@@ -498,10 +753,14 @@ const Skills = {
     icon: "<:wise_skill:1454330440096944201>",
     description: "Reduces Defense.",
     execute: (attacker, defender, skillValues = [10]) => {
-      const percent = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 10;
+      const percent =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 10;
       const reduceAmount = -Math.floor(defender.stats.def * (percent / 100));
       addBuff(defender, "Proxy's Rizz", "def", reduceAmount, 2);
-      return { damage: 0, log: `**${attacker.name}** uses **Proxy's Rizz**!\n**${defender.name}**'s Defense reduced!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** uses **Proxy's Rizz**!\n**${defender.name}**'s Defense reduced!`,
+      };
     },
   },
 
@@ -512,10 +771,14 @@ const Skills = {
     icon: "<:tb_skill:1454873572211425301>",
     description: "Increases Defense.",
     execute: (attacker, defender, skillValues = [15]) => {
-      const percent = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 15;
+      const percent =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 15;
       const boostAmount = Math.floor(attacker.stats.def * (percent / 100));
       addBuff(attacker, "Bulwark Protocol", "def", boostAmount, 2);
-      return { damage: 0, log: `**${attacker.name}** used **Bulwark Protocol**!\nDefense increased!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** used **Bulwark Protocol**!\nDefense increased!`,
+      };
     },
   },
 
@@ -526,7 +789,8 @@ const Skills = {
     icon: "⚔️",
     description: "Slashes the target.",
     execute: (attacker, defender, skillValues = [1.1]) => {
-      const multiplier = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 1.1;
+      const multiplier =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 1.1;
       const rawDamage = attacker.stats.atk * multiplier;
       const { damage, suffix } = calculateDamage(attacker, defender, rawDamage);
       defender.stats.hp -= damage;
@@ -539,14 +803,15 @@ const Skills = {
     },
   },
 
-  "Tackle": {
+  Tackle: {
     initialEnergy: 50,
     requiredEnergy: 100,
     name: "Tackle",
     icon: "💥",
     description: "Tackles the target.",
     execute: (attacker, defender, skillValues = 1.1) => {
-      const multiplier = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 1.1;
+      const multiplier =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 1.1;
       const rawDamage = attacker.stats.atk * multiplier;
       const { damage, suffix } = calculateDamage(attacker, defender, rawDamage);
       defender.stats.hp -= damage;
@@ -566,17 +831,24 @@ const Skills = {
     icon: "<:qiuyuan_skill:1447262771245748255>",
     description: "Enters a defensive stance.",
     execute: (attacker, defender, skillValues = [10, 10]) => {
-      const dodgeChance = (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 10;
-      const counterDmg = Array.isArray(skillValues) && skillValues[1] ? skillValues[1] : 10;
+      const dodgeChance =
+        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 10;
+      const counterDmg =
+        Array.isArray(skillValues) && skillValues[1] ? skillValues[1] : 10;
       addBuff(attacker, "Wind's Edge", "dodge", dodgeChance, 3, counterDmg);
-      return { damage: 0, log: `**${attacker.name}** activates **Wind's Edge**!\nGain **${dodgeChance}% Dodge Chance** against Basic Attacks!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** activates **Wind's Edge**!\nGain **${dodgeChance}% Dodge Chance** against Basic Attacks!`,
+      };
     },
   },
 
-  "Basic Attack": {
+ "Basic Attack": {
     name: "Basic Attack",
     icon: "🗡️",
     execute: (attacker, defender) => {
+      let logExtra = "";
+
       // 1. Check Miss
       if (attacker.effects) {
         const blindEffect = attacker.effects.find((e) => e.stat === "missChance");
@@ -604,11 +876,25 @@ const Skills = {
       if (isCrit) logPrefix = `**CRITICAL HIT!** **${attacker.name}** attacks!`;
       let log = `${logPrefix} Dealt **${damage}** DMG.${suffix}`;
 
-      // ✅ TRIGGERS
-      log += handleDamageStorage(defender, damage);
-      log += handleDeathPrevention(defender); // ✅ Death Check
+      // Wisadel Cleanup (If out of ammo)
+      if (attacker.name === "Wisadel") {
+         const ammoBuff = attacker.effects.find(e => e.name === "Explosive Ammo");
+         if (ammoBuff && ammoBuff.amount <= 0) {
+             // Clean up effects
+             attacker.effects = attacker.effects.filter(e => e.name !== "Explosive Ammo");
+             const statBuffs = attacker.effects.filter(e => e.name === "Wisadel Buff");
+             statBuffs.forEach(b => {
+                 if (attacker.stats[b.stat] !== undefined) attacker.stats[b.stat] -= b.amount;
+             });
+             attacker.effects = attacker.effects.filter(e => e.name !== "Wisadel Buff");
+             log += `\n\n⚠️ **Wisadel** ran out of Ammo! Buffs ended.`;
+         }
+      }
 
-      // ✅ PASSIVES (Lifesteal & Acheron)
+      log += handleDamageStorage(defender, damage);
+      log += handleDeathPrevention(defender); 
+
+      // Passive: Lifesteal
       if (attacker.effects) {
         const lifestealBuff = attacker.effects.find((e) => e.stat === "lifesteal");
         if (lifestealBuff) {
@@ -618,6 +904,7 @@ const Skills = {
             log += `\nHealed **${healAmount}** HP via Lifesteal!`;
           }
         }
+        // Passive: Acheron Stacks (Triggered ON Attack)
         const acheronBuff = attacker.effects.find((e) => e.name === "Slashed Dream");
         if (acheronBuff) {
           acheronBuff.amount += 1;
@@ -629,10 +916,10 @@ const Skills = {
             const nukeCalc = calculateDamage(attacker, defender, nukeRaw, true);
             defender.stats.hp -= nukeCalc.damage;
             acheronBuff.amount = 0;
-            log += `\n**Slashed Dream Consumed!**\n**${attacker.name}** unleashed **Crimson Slash**! Dealt **${nukeCalc.damage}** DMG!${nukeCalc.suffix}`;
+            log += ` **Slashed Dream Consumed!**\n**${attacker.name}** unleashed **Crimson Slash**! Dealt **${nukeCalc.damage}** DMG! **CRITICAL HIT!!**${nukeCalc.suffix}`;
             
             log += handleDamageStorage(defender, nukeCalc.damage);
-            log += handleDeathPrevention(defender); // ✅ Death Check (On Nuke)
+            log += handleDeathPrevention(defender); 
           }
         }
       }
@@ -641,4 +928,5 @@ const Skills = {
   },
 };
 
-module.exports = Skills;
+// module.exports = Skills;
+module.exports = { Skills, checkPreAttackPassives };

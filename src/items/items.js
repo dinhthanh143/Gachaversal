@@ -60,7 +60,7 @@ module.exports = {
     description: "Used to pull on standard banner.",
     emoji: "🎫",
     type: "Gacha",
-    price: 10,
+    price: 8,
     currency: "gem",
   },
   tide: {

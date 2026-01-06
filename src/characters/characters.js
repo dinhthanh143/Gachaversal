@@ -217,7 +217,7 @@ const lappland = {
     icon: "<:lappland_skill:1454368319686840341>",
     name: "Nocturnal Silence",
     description:
-      "Silences the target for 2 turns. While Silenced, target loses {0} Energy at the start of each turn and cannot regenerate Energy or use Skill.",
+      "Silences the target for 2 turns. While Silenced, target loses {0} Energy at the start of each turn and cannot regenerate Energy nor use Skill.",
     values: [[5, 8, 11, 14, 17, 20]],
   },
   image:
@@ -258,7 +258,7 @@ const herta = {
     icon: "<:herta_skill:1456549247611699200>",
     name: "Key of Interpretation",
     description:
-      "Randomly sets the enemy’s Energy to 0–100%; if the new value is lower, Herta takes damage equal to {0}% of her Max HP based on the Energy lost, otherwise the enemy is marked with **Interpretation** and takes {1}% of Herta’s Max HP as Ice damage based on the Energy gained when they next act.",
+      "Randomly sets the enemy’s Energy to 0–100%; if the new value is lower, Herta takes damage equal to {0}% of her Max HP based on the Energy lost, otherwise the enemy is marked with **Interpretation** and takes {1}% of Herta’s Max HP as Ice damage based on the Energy gained.",
     values: [
       [0.45, 0.4, 0.35, 0.3, 0.28, 0.25],
       [0.6, 0.8, 1, 1.2, 1.4, 1.6],
@@ -413,7 +413,7 @@ const doctor = {
   pokeId: 20,
   name: "Doctor",
   franchise: "Arknights",
-  type: "Neutral ✨",
+  type: "Nature 🍃",
   stats: {
     atk: 66,
     hp: 72,
@@ -520,15 +520,60 @@ const yuzuha = {
     icon: "<:yuzuha_skill:1457214067638009956>",
     name: "Sugar Rush",
     description:
-      "Yuzuha sweetly invigorates herself, increasing ATK by {0}% and Energy regeneration by {1}% for 3 turns. The duration resets everytime she uses her skill, this effect can stack up to 2 times.",
+      "Yuzuha sweetly invigorates herself, increasing ATK by {0}% and Energy regeneration by {1}% for 4 turns. The duration resets everytime she uses her skill, this effect can stack up to 2 times.",
     values: [
       [12, 14, 16, 18, 20, 22],
-      [10, 12, 14, 16, 18, 20],
+      [12, 14, 16, 18, 20, 22],
     ],
   },
   image:
     "https://res.cloudinary.com/pachi/image/upload/v1767459013/6d474d90e1557b32084db830752f1b98_dcjwno.jpg",
   cardColor: "#e02f2f",
+};
+//wip
+const skadi = {
+  pokeId: 25,
+  name: "Skadi",
+  franchise: "Arknights",
+  type: "Water 💧 ",
+   stats: {
+    atk: 0,
+    hp: 0,
+    speed: 0,
+    def: 0,
+  },
+  skill: {
+    icon: "",
+    name: "",
+    description: "",
+    values: [
+      [12, 14, 16, 18, 20, 22],
+      [12, 14, 16, 18, 20, 22],
+    ],
+  },
+  image: "https://res.cloudinary.com/pachi/image/upload/v1767609894/333d0ac60c8f81fd8a96f3bbb9f58466_ivxr3i.jpg",
+  cardColor: "#ab0a40",
+};
+const mydei = {
+  pokeId: 26,
+  name: "Mydei",
+  franchise: "Honkai Star Rail",
+  type: "Earth ⛰️",
+   stats: {
+    atk: 0,
+    hp: 0,
+    speed: 0,
+    def: 0,
+  },
+  skill: {
+    icon: "",
+    name: "",
+    description: "",
+    values: [
+    ],
+  },
+  image: "https://res.cloudinary.com/pachi/image/upload/v1767609904/5dd5a00d3ba240e3bb754c341bf25e6d_hxtgvo.jpg",
+  cardColor: "#dea426",
 };
 module.exports = {
   galbrena,
@@ -555,4 +600,5 @@ module.exports = {
   amiya,
   wisadel,
   yuzuha,
+  skadi,mydei
 };

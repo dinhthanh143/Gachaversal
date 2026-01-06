@@ -11,7 +11,7 @@ const {
   Mobs,
 } = require("./db");
 const { addXp, getLevel, giveXpAndNotify } = require("./levelSystem");
-const { getRarityStars, wrapSkillDescription } = require("./functions");
+const { getRarityStars, wrapSkillDescription, getNextUid } = require("./functions");
 const { id } = require("./commands/id");
 const { createAccount } = require("./commands/create");
 const { start } = require("./commands/start");
@@ -47,6 +47,8 @@ const {
   GatewayIntentBits,
   EmbedBuilder,
 } = require("discord.js");
+const { initiateTrade } = require("./trade/tradeManager");
+const { ascension } = require("./characters/ascension");
 
 connectDB();
 
@@ -70,13 +72,64 @@ client.once(Events.ClientReady, (c) => {
 });
 
 const VALID_COMMANDS = new Set([
-  "!id", "!start", "!create", "!level", "!addxp", "!hourly", "!h", "!daily", "!d", "!weekly",
-  "!inv", "!cards", "!c", "!addcard", "!view", "!gold", "!g", "!stam", "!st", "!gem",
-  "!pity", "!delete", "!pd", "!dropcard", "!select", "!index", "!info", "!profile", "!p",
-  "!help", "!fight", "!gacha", "!shop", "!buy", "!useitem", "!battle", "!bt", "!sbt", "!skipbattle",
-  "!mindex", "!minfo", "!dungeon", "!area", "!stage", "!resetdun", "!next",
+  "!id",
+  "!start",
+  "!create",
+  "!level",
+  "!addxp",
+  "!hourly",
+  "!h",
+  "!daily",
+  "!d",
+  "!weekly",
+  "!inv",
+  "!cards",
+  "!c",
+  "!addcard",
+  "!view",
+  "!gold",
+  "!g",
+  "!stam",
+  "!st",
+  "!gem",
+  "!pity",
+  "!delete",
+  "!pd",
+  "!dropcard",
+  "!select",
+  "!index",
+  "!info",
+  "!profile",
+  "!p",
+  "!help",
+  "!fight",
+  "!gacha",
+  "!shop",
+  "!buy",
+  "!useitem",
+  "!battle",
+  "!bt",
+  "!sbt",
+  "!skipbattle",
+  "!mindex",
+  "!minfo",
+  "!dungeon",
+  "!area",
+  "!stage",
+  "!resetdun",
+  "!next",
   // Admin commands
-  "!pokeadd", "!addIndex", "!addgold", "!addticket", "!dacc", "!dindex", "!dall", "!dinv", "!addmob", "!dmob", "!adminstam"
+  "!pokeadd",
+  "!addIndex",
+  "!addgold",
+  "!addticket",
+  "!dacc",
+  "!dindex",
+  "!dall",
+  "!dinv",
+  "!addmob",
+  "!dmob",
+  "!adminstam",
 ]);
 
 const cooldowns = new Map();
@@ -86,7 +139,7 @@ const ADMIN_ID = "490338110572331018";
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
-  
+
   // 1. PARSE COMMAND
   const args = message.content.trim().split(/ +/);
   const commandName = args[0].toLowerCase(); // e.g., "!create", "!cards"
@@ -98,7 +151,8 @@ client.on(Events.MessageCreate, async (message) => {
 
       if (userId !== ADMIN_ID) {
         if (cooldowns.has(userId)) {
-          const expirationTime = cooldowns.get(userId) + COOLDOWN_SECONDS * 1000;
+          const expirationTime =
+            cooldowns.get(userId) + COOLDOWN_SECONDS * 1000;
           const now = Date.now();
 
           if (now < expirationTime) {
@@ -115,6 +169,27 @@ client.on(Events.MessageCreate, async (message) => {
   // ====================================================
   // ROUTING LOGIC (STRICT MATCHING)
   // ====================================================
+  if (commandName === prefix + "trade") {
+    await initiateTrade(message);
+  }
+  //placeholder command
+  if (commandName === prefix + "addcard") {
+    await ascension(message);
+  }
+  if (commandName === prefix + "additem") {
+    await ascension(message);
+  }
+  if (commandName === prefix + "tradecancel") {
+    await ascension(message);
+  }
+  if (commandName === prefix + "tradeconfirm") {
+    await ascension(message);
+  }
+
+  //ascension
+  if (commandName === prefix + "ascend" || commandName === prefix + "as") {
+    await ascension(message);
+  }
 
   if (commandName === prefix + "id") {
     id(message);
@@ -144,7 +219,9 @@ client.on(Events.MessageCreate, async (message) => {
   if (commandName === prefix + "level") {
     const info = await getLevel(message.author.id);
     if (!info) return message.reply("You don’t exist yet. Use !create");
-    message.reply(`Level: **${info.level}**\nXP: **${info.currentXp}/${info.nextLevelXp}**`);
+    message.reply(
+      `Level: **${info.level}**\nXP: **${info.currentXp}/${info.nextLevelXp}**`
+    );
   }
 
   // Economy
@@ -171,7 +248,7 @@ client.on(Events.MessageCreate, async (message) => {
   }
 
   // Add Card (Admin/Debug)
-  if (commandName === prefix + "addcard") {
+  if (commandName === prefix + "hackcard") {
     try {
       const cardId = parseInt(args[1]);
       let rarity = parseInt(args[2]);
@@ -194,14 +271,19 @@ client.on(Events.MessageCreate, async (message) => {
 
       const baseStats = cardData.stats;
       const uniqueStats = {
-        hp: Math.floor(baseStats.hp * (3 + rarity) + rarity * 20 + Math.floor(Math.random() * 20)),
+        hp: Math.floor(
+          baseStats.hp * (3 + rarity) +
+            rarity * 20 +
+            Math.floor(Math.random() * 20)
+        ),
         atk: baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10),
         def: baseStats.def + 20 * rarity + Math.floor(Math.random() * 10),
         speed: baseStats.speed + 7 * rarity + Math.floor(Math.random() * 5),
       };
-
+      const  nextUid = await getNextUid(userId)
       await Cards.create({
         ownerId: userId,
+        uid: nextUid,
         cardId: cardData.pokeId,
         stats: uniqueStats,
         rarity: rarity,
@@ -212,7 +294,10 @@ client.on(Events.MessageCreate, async (message) => {
       const embed = new EmbedBuilder()
         .setColor(cardData.cardColor || "#FFFFFF")
         .setTitle(`🎴 Obtained ${cardData.name}!`)
-        .setDescription(`**Rarity:** ${rarity} ⭐\n` + `**HP:** ${uniqueStats.hp} | **ATK:** ${uniqueStats.atk} | **DEF:** ${uniqueStats.def} | **SPD:** ${uniqueStats.speed}`)
+        .setDescription(
+          `**Rarity:** ${rarity} ⭐\n` +
+            `**HP:** ${uniqueStats.hp} | **ATK:** ${uniqueStats.atk} | **DEF:** ${uniqueStats.def} | **SPD:** ${uniqueStats.speed}`
+        )
         .setThumbnail(cardData.image);
 
       message.reply({ embeds: [embed] });
@@ -246,10 +331,13 @@ client.on(Events.MessageCreate, async (message) => {
   // Deletion
   if (commandName === prefix + "delete") {
     const targetId = args[1];
-    if (!targetId) return message.reply("You need to provide a user ID to delete.");
+    if (!targetId)
+      return message.reply("You need to provide a user ID to delete.");
 
     try {
-      const deletedUser = await UserContainer.findOneAndDelete({ userId: targetId });
+      const deletedUser = await UserContainer.findOneAndDelete({
+        userId: targetId,
+      });
       const delInv = await Inventory.findOneAndDelete({ userId: targetId });
       if (!deletedUser) return message.reply("No user found with that ID.");
       if (!delInv) return message.reply("No inv found with that ID.");
@@ -262,7 +350,8 @@ client.on(Events.MessageCreate, async (message) => {
 
   if (commandName === prefix + "pd") {
     const targetId = args[1];
-    if (!targetId) return message.reply("You need to provide a Pokemon ID to delete.");
+    if (!targetId)
+      return message.reply("You need to provide a Pokemon ID to delete.");
 
     try {
       const deletedIndex = await Index.findOneAndDelete({ pokeId: targetId });
@@ -292,7 +381,9 @@ client.on(Events.MessageCreate, async (message) => {
           added++;
         }
       }
-      message.reply(`**Database Update Complete!**\n✅ **Added:** ${added}\n⏭️ **Skipped:** ${skipped}`);
+      message.reply(
+        `**Database Update Complete!**\n✅ **Added:** ${added}\n⏭️ **Skipped:** ${skipped}`
+      );
     } catch (error) {
       console.error(error);
       message.reply("Error updating index: " + error.message);
@@ -302,8 +393,9 @@ client.on(Events.MessageCreate, async (message) => {
   if (commandName === prefix + "addmob" && message.author.id === ADMIN_ID) {
     try {
       const list = mobData.mobs;
-      if (!list || !Array.isArray(list)) return message.reply("❌ Error: Could not find array.");
-      
+      if (!list || !Array.isArray(list))
+        return message.reply("❌ Error: Could not find array.");
+
       let added = 0;
       let skipped = 0;
       message.reply(`🔄 Processing ${list.length} enemies...`);
@@ -317,7 +409,9 @@ client.on(Events.MessageCreate, async (message) => {
           added++;
         }
       }
-      message.reply(`**Mobs Update Complete!**\n✅ **Added:** ${added}\n⏭️ **Skipped:** ${skipped}`);
+      message.reply(
+        `**Mobs Update Complete!**\n✅ **Added:** ${added}\n⏭️ **Skipped:** ${skipped}`
+      );
     } catch (error) {
       console.error(error);
       message.reply("Error updating mobs: " + error.message);
@@ -377,7 +471,10 @@ client.on(Events.MessageCreate, async (message) => {
   if (commandName === prefix + "stage") {
     await stageDetails(message);
   }
-  if (commandName === prefix + "next" && args[1] === "stage" || commandName === prefix + "next" && args[1] === "st") {
+  if (
+    (commandName === prefix + "next" && args[1] === "stage") ||
+    (commandName === prefix + "next" && args[1] === "st")
+  ) {
     await nextStage(message);
   }
 
@@ -405,11 +502,18 @@ client.on(Events.MessageCreate, async (message) => {
     try {
       const user = await UserContainer.findOne({ userId: message.author.id });
       if (user) {
-        user.dungeon = { maxArea: 1, maxStage: 1, currentArea: 0, currentStage: 0 };
+        user.dungeon = {
+          maxArea: 1,
+          maxStage: 1,
+          currentArea: 0,
+          currentStage: 0,
+        };
         await user.save();
         message.reply("🔄 Dungeon progress reset.");
       }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   if (commandName === prefix + "addticket" && message.author.id === ADMIN_ID) {
@@ -422,7 +526,8 @@ client.on(Events.MessageCreate, async (message) => {
       if (!user) user = await UserContainer.create({ userId: targetUserId });
 
       let inv = await Inventory.findOne({ userId: targetUserId });
-      if (!inv) inv = await Inventory.create({ userId: targetUserId, items: [] });
+      if (!inv)
+        inv = await Inventory.create({ userId: targetUserId, items: [] });
 
       user.gold += 99999999;
       user.gem += 10000;

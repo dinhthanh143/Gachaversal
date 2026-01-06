@@ -1,5 +1,7 @@
 const { Cards, Index, Inventory } = require("../db");
 const { getFixedCardXp, getCardLevelCap } = require("../dungeon/dungeonData");
+// ✅ Import getNextUid
+const { getNextUid } = require("../functions");
 
 // ==========================================
 // 1. CONFIGURATION & HELPERS
@@ -21,12 +23,9 @@ const BLESSINGS = {
   b4: { name: "Divine Blessing", chance: 0.5, minThreat: 3 }
 };
 
-// ✅ STAT CALCULATION (Local Version)
+// ✅ STAT CALCULATION
 function calculateStats(baseStats, rarity) {
-  // Fallback defaults if baseStats is missing
   const b = baseStats || { hp: 75, atk: 60, def: 50, speed: 69 };
-  
-  // Ensure rarity is a number (default to 1)
   const r = typeof rarity === 'number' ? rarity : 1;
 
   return {
@@ -37,13 +36,12 @@ function calculateStats(baseStats, rarity) {
   };
 }
 
-// Roll Rarity based on Mob Threat
+// Roll Rarity
 function rollDropRarity(threatLevel) {
   const rand = Math.random() * 100;
   let chance3 = 5;
   let chance2 = 20;
   
-  // Increase chances based on threat
   if (threatLevel > 1) {
       const scale = (threatLevel - 1) * 5;
       chance3 += scale;
@@ -146,35 +144,35 @@ async function processBattleRewards(userId, user, playerCard, stageData, loops =
     else userInv.items.push({ itemId: "ticket", amount: report.lvlUpTickets });
   }
 
-  // --- D. BATTLE DROPS ---
+  // --- D. BATTLE DROPS (SAME CARD FIX) ---
+  
+  // 1. Fetch ONE random card (Base Card)
+  const randomCardAgg = await Index.aggregate([{ $sample: { size: 1 } }]);
+  const baseData = (randomCardAgg && randomCardAgg.length > 0) ? randomCardAgg[0] : null;
+
   for (let i = 0; i < loops; i++) {
     
-    // 1. CARD DROP
-    // Determine which "grade" (rarity) this specific drop will be
-    const dropRarity = rollDropRarity(threatLevel);
-    
-    // Grab ANY random character from the Index (Master List)
-    // We do NOT filter by rarity because Index has no rarity field.
-    const randomCard = await Index.aggregate([{ $sample: { size: 1 } }]);
-
-    if (randomCard && randomCard.length > 0) {
-        const baseData = randomCard[0];
-        
-        // Calculate unique stats using the ROLLED rarity
+    // -- Card Drop (Copies of the same Base Card) --
+    if (baseData) {
+        const dropRarity = rollDropRarity(threatLevel);
         const uniqueStats = calculateStats(baseData.stats, dropRarity);
         
+        // ✅ CALCULATE NEXT UID HERE
+        const nextUid = await getNextUid(userId);
+
         await Cards.create({
             ownerId: userId,
+            uid: nextUid, // Assign Persistent ID
             cardId: baseData.pokeId,
             stats: uniqueStats,
-            rarity: dropRarity, // ✅ Explicitly set the rolled rarity
+            rarity: dropRarity,
             level: 1,
             xp: 0
         });
         report.drops.push(`${baseData.name} (${"⭐".repeat(dropRarity)})`);
     }
 
-    // 2. ITEM DROP
+    // -- Item Drop --
     const itemDropId = rollItemDrop(threatLevel);
     if (itemDropId) {
         const itemData = BLESSINGS[itemDropId];

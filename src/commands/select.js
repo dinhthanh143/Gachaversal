@@ -2,6 +2,7 @@ const { UserContainer, Cards } = require("../db");
 const { getRarityStars } = require("../functions");
 const { EmbedBuilder } = require("discord.js");
 const { formatImage } = require("./infoCard");
+const { getAscIcon } = require("./inv_cards");
 
 async function select(message) {
   try {
@@ -25,7 +26,9 @@ async function select(message) {
       }
 
       // Fetch the specific selected card
-      const card = await Cards.findById(user.selectedCard).populate("masterData");
+      const card = await Cards.findById(user.selectedCard).populate(
+        "masterData"
+      );
 
       if (!card || !card.masterData) {
         return message.reply("Your selected card data is corrupted.");
@@ -43,9 +46,10 @@ async function select(message) {
         const rarityIndex = Math.max(0, card.rarity - 1);
         master.skill.values.forEach((valueArray, i) => {
           if (Array.isArray(valueArray) && valueArray.length > 0) {
-            const val = valueArray[rarityIndex] !== undefined 
-              ? valueArray[rarityIndex] 
-              : valueArray[valueArray.length - 1];
+            const val =
+              valueArray[rarityIndex] !== undefined
+                ? valueArray[rarityIndex]
+                : valueArray[valueArray.length - 1];
             const regex = new RegExp(`\\{${i}\\}`, "g");
             finalSkillDesc = finalSkillDesc.replace(regex, val);
           }
@@ -59,7 +63,11 @@ async function select(message) {
           name: `${message.author.username}'s Selected Unit`,
           iconURL: message.author.displayAvatarURL({ dynamic: true }),
         })
-        .setTitle(`${master.name} - Lv. ${card.level}`)
+        .setTitle(
+          `${master.name} - Lv. ${card.level} | Ascension: ${getAscIcon(
+            card.ascension
+          )}`
+        )
         .addFields({
           name: "Info",
           value: `**Rarity:** ${rarityStars}\n**Type:** ${master.type}`,
@@ -80,7 +88,7 @@ async function select(message) {
           }
         )
         .setImage(scaledImg)
-        .setFooter({ text: `Card ID: ${card.id}` });
+        .setFooter({ text: `Card ID: ${card.uid || "N/A"}` });
 
       return message.reply({ embeds: [embed] });
     }
@@ -94,22 +102,25 @@ async function select(message) {
       return message.reply("Invalid ID. Try again (e.g., `!select 1`)");
     }
 
-    // ✅ FETCH ALL & USE STABLE CHRONOLOGICAL SORT
-    // Sort: _id (Ascending) -> Oldest to Newest
+    // ✅ FETCH ALL CARDS
     let userCards = await Cards.find({ ownerId: userId })
       .populate("masterData")
-      .sort({ _id: 1 }); // ✅ CHANGED TO MATCH INVENTORY
+      .sort({ _id: 1 }); 
 
     if (!userCards || userCards.length === 0) {
-        return message.reply("You have no cards.");
+      return message.reply("You have no cards.");
     }
 
-    // Pick card by stable index (1-based from input maps directly to array index)
-    const cardIndex = indexInput - 1;
-    const card = userCards[cardIndex];
+    // ✅ FIND CARD MATCHING THE PERSISTENT UID
+    const card = userCards.find((c, i) => {
+        const displayId = c.uid ? c.uid : (i + 1);
+        return displayId === indexInput;
+    });
 
     if (!card) {
-      return message.reply(`Card **#${indexInput}** not found in your inventory.`);
+      return message.reply(
+        `Card **#${indexInput}** not found in your inventory.`
+      );
     }
     if (!card.masterData) {
       return message.reply("Card data corrupted.");
@@ -121,9 +132,10 @@ async function select(message) {
 
     // Success Message
     message.reply(
-      `Successfully equipped **#${indexInput} ${card.masterData.name}** (Lv. ${card.level}) ${getRarityStars(card.rarity)}`
+      `Successfully equipped **#${indexInput} ${card.masterData.name}** (Lv. ${
+        card.level
+      }) ${getRarityStars(card.rarity)}`
     );
-
   } catch (error) {
     console.error(error);
     message.reply("Error processing request.");

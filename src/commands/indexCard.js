@@ -45,7 +45,7 @@ async function indexCard(message) {
       const currentList = allPoke.slice(start, end);
 
       const listText = currentList
-        .map((p) => `**#${p.pokeId}** - ${p.name} (${p.type})`)
+        .map((p) => `**#${p.pokeId}** - ${p.name} ${p.type.split(" ")[1]}`)
         .join("\n");
 
       const embed = new EmbedBuilder()

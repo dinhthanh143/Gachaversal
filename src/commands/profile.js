@@ -3,41 +3,66 @@ const { UserContainer, Cards } = require("../db"); // ✅ Removed Inventory sinc
 const { EmbedBuilder } = require("discord.js");
 const { getRarityStars } = require("../functions");
 const { formatImage } = require("./infoCard");
+const { getAscIcon } = require("./inv_cards");
 
 // ==========================================
 // 🎨 PROGRESS BAR HELPERS
 // ==========================================
 const EMOJIS = {
   // Green (70% - 100%)
-  green: { left: "<:g1:1455167942646824990>", mid: "<:g2:1455166531926233108>", right: "<:g3:1455167940658728970>" },
+  green: {
+    left: "<:g1:1455167942646824990>",
+    mid: "<:g2:1455166531926233108>",
+    right: "<:g3:1455167940658728970>",
+  },
   // Blue (Energy)
-  blue: { left: "<:b1:1455167938704179362>", mid: "<:b2:1455167983294087188>", right: "<:blue3:1455168960113807381>" },
+  blue: {
+    left: "<:b1:1455167938704179362>",
+    mid: "<:b2:1455167983294087188>",
+    right: "<:blue3:1455168960113807381>",
+  },
   // Yellow (50% - 70%)
-  yellow: { left: "<:y1:1455167850267410504>", mid: "<:y2:1455166520597413980>", right: "<:gr3:1455224186044944528>" },
+  yellow: {
+    left: "<:y1:1455167850267410504>",
+    mid: "<:y2:1455166520597413980>",
+    right: "<:gr3:1455224186044944528>",
+  },
   // Orange (30% - 50%)
-  orange: { left: "<:o1:1455167852519751797>", mid: "<:o2:1455166538637250581>", right: "<:gr3:1455224186044944528>" },
+  orange: {
+    left: "<:o1:1455167852519751797>",
+    mid: "<:o2:1455166538637250581>",
+    right: "<:gr3:1455224186044944528>",
+  },
   // Red (< 30%)
-  red: { left: "<:r1:1455168985107664896>", mid: "<:r2:1455169010776801292>", right: "<:gr3:1455224186044944528>" },
+  red: {
+    left: "<:r1:1455168985107664896>",
+    mid: "<:r2:1455169010776801292>",
+    right: "<:gr3:1455224186044944528>",
+  },
   // Empty
-  empty: { left: "<:gr1:1455224191136825357>", mid: "<:gr2:1455224188624441428>", right: "<:gr3:1455224186044944528>" }
+  empty: {
+    left: "<:gr1:1455224191136825357>",
+    mid: "<:gr2:1455224188624441428>",
+    right: "<:gr3:1455224186044944528>",
+  },
 };
 
 function generateProgressBar(current, max, type = "hp") {
   const percent = Math.max(0, Math.min(1, current / max));
   const filled = Math.ceil(percent * 10); // 0 to 10 segments
-  const barParts = []; 
+  const barParts = [];
 
   // Determine Color Theme
   let theme = EMOJIS.green;
-  
+
   if (type === "energy") {
     theme = EMOJIS.blue;
   } else if (type === "xp") {
     theme = EMOJIS.green; // Always green for XP
   } else {
-    if (percent <= 0.3) theme = EMOJIS.red;         
-    else if (percent <= 0.5) theme = EMOJIS.orange; 
-    else if (percent <= 0.7) theme = EMOJIS.yellow; 
+    if (percent <= 0.3) theme = EMOJIS.red;
+    else if (percent <= 0.5) theme = EMOJIS.orange;
+    else if (percent <= 0.7) theme = EMOJIS.yellow;
   }
 
   // 1. Left Cap
@@ -51,7 +76,7 @@ function generateProgressBar(current, max, type = "hp") {
   // 3. Right Cap
   barParts.push(filled === 10 ? theme.right : EMOJIS.empty.right);
 
-  return barParts.join("\u200D"); 
+  return barParts.join("\u200D");
 }
 
 // ==========================================
@@ -120,7 +145,9 @@ async function profile(message) {
         },
         {
           name: "📈 Progress",
-          value: `**Level ${user.level}**\nXP: ${user.xp}/${xpNeeded}\n${xpBar} **${percentage.toFixed(0)}%**`,
+          value: `**Level ${user.level}**\nXP: ${
+            user.xp
+          }/${xpNeeded}\n${xpBar} **${percentage.toFixed(0)}%**`,
           inline: false,
         },
         {
@@ -129,7 +156,8 @@ async function profile(message) {
             selectedCard && selectedCard.masterData
               ? `**${selectedCard.masterData.name}**\nLv. ${
                   selectedCard.level
-                }\n${getRarityStars(selectedCard.rarity)}`
+                } |  Ascension: ${getAscIcon(selectedCard.ascension)}
+                \n${getRarityStars(selectedCard.rarity)}`
               : "*No unit selected*",
           inline: true,
         },

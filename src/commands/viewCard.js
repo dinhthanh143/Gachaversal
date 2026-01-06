@@ -2,6 +2,7 @@ const { Cards, UserContainer } = require("../db");
 const { getRarityStars } = require("../functions");
 const { EmbedBuilder } = require("discord.js");
 const { formatImage } = require("./infoCard");
+const { getAscIcon } = require("./inv_cards");
 
 async function view(message) {
   try {
@@ -13,33 +14,39 @@ async function view(message) {
     if (!user) return message.reply(`No account found.`);
 
     if (isNaN(indexInput) || indexInput < 1) {
-      return message.reply("Please provide a valid card number (e.g., `!view 1`).");
+      return message.reply(
+        "Please provide a valid card number (e.g., `!view 1`)."
+      );
     }
 
     // ==========================================
-    // 1. FETCH CARDS (STRICT CHRONOLOGICAL SORT)
+    // 1. FETCH CARDS
     // ==========================================
-    // Must match the updated "getSortedUserCards" logic from inventory
-    // Sort: _id (Ascending) -> Oldest to Newest
+    // We sort by _id to maintain the background order for legacy fallback
     let userCards = await Cards.find({ ownerId: userId })
       .populate("masterData")
-      .sort({ _id: 1 }); // ✅ CHANGED TO MATCH INVENTORY
+      .sort({ _id: 1 }); 
 
     if (!userCards || userCards.length === 0) {
       return message.reply("You have no cards to view.");
     }
 
     // ==========================================
-    // 2. GET TARGET BY INDEX
+    // 2. FIND TARGET BY UID (PERSISTENT INDEX)
     // ==========================================
-    // The input index maps directly to the array position
-    const cardIndex = indexInput - 1;
-    const card = userCards[cardIndex];
+    // We search for a card whose 'uid' matches the input.
+    // Fallback: If 'uid' is missing (old card), we use (Array Index + 1).
+    const card = userCards.find((c, i) => {
+        const displayId = c.uid ? c.uid : (i + 1);
+        return displayId === indexInput;
+    });
 
     if (!card) {
-      return message.reply(`You don't have a card at number **#${indexInput}**.`);
+      return message.reply(
+        `You don't have a card with Inventory ID **#${indexInput}**.`
+      );
     }
-    
+
     if (!card.masterData) {
       return message.reply("Error: Card data corrupted (Master Data missing).");
     }
@@ -51,9 +58,10 @@ async function view(message) {
     const rarityStars = getRarityStars(card.rarity);
     const xpCap = card.xpCap || 50; // Default if missing
     const favIcon = card.fav ? "❤️ " : "";
-    
+
     // Check if Selected
-    const isSelected = user.selectedCard && user.selectedCard.toString() === card._id.toString();
+    const isSelected =
+      user.selectedCard && user.selectedCard.toString() === card._id.toString();
     const selectedText = isSelected ? " **[SELECTED]**" : "";
 
     // Skill Scaling Logic (Replace {0}, {1} placeholders)
@@ -61,14 +69,15 @@ async function view(message) {
     if (master.skill.values && master.skill.values.length > 0) {
       // Rarity is 1-based, array is 0-based
       const rarityIndex = Math.max(0, card.rarity - 1);
-      
+
       master.skill.values.forEach((valueArray, i) => {
         if (Array.isArray(valueArray) && valueArray.length > 0) {
           // Get value for this rarity, or fallback to last available value
-          const val = valueArray[rarityIndex] !== undefined 
-            ? valueArray[rarityIndex] 
-            : valueArray[valueArray.length - 1];
-            
+          const val =
+            valueArray[rarityIndex] !== undefined
+              ? valueArray[rarityIndex]
+              : valueArray[valueArray.length - 1];
+
           const regex = new RegExp(`\\{${i}\\}`, "g");
           finalSkillDesc = finalSkillDesc.replace(regex, val);
         }
@@ -79,33 +88,38 @@ async function view(message) {
 
     const embed = new EmbedBuilder()
       .setColor(master.cardColor || "#ffffff")
-      .setAuthor({ 
-        name: `${message.author.username}'s Card`, 
-        iconURL: message.author.displayAvatarURL() 
+      .setAuthor({
+        name: `${message.author.username}'s Card`,
+        iconURL: message.author.displayAvatarURL(),
       })
-      .setTitle(`${favIcon}${master.name} - Lv. ${card.level}${selectedText}`)
+      .setTitle(
+        `${favIcon}${master.name} - Lv. ${
+          card.level
+        }${selectedText} | Ascension: ${getAscIcon(card.ascension)}`
+      )
       .addFields(
-        { 
-          name: "Info", 
-          value: `**Rarity:** ${rarityStars}\n**Type:** ${master.type}\n**Franchise:** ${master.franchise || "Unknown"}`, 
-          inline: false 
+        {
+          name: "Info",
+          value: `**Rarity:** ${rarityStars}\n**Type:** ${
+            master.type
+          }\n**Franchise:** ${master.franchise || "Unknown"}`,
+          inline: false,
         },
-        { 
-          name: "Stats", 
-          value: `⚔️ **ATK:** ${card.stats.atk}\n🩸 **HP:** ${card.stats.hp}\n💨 **SPD:** ${card.stats.speed}\n🛡️ **DEF:** ${card.stats.def}\n✨ **XP:** ${card.xp} / ${xpCap}`, 
-          inline: false 
+        {
+          name: "Stats",
+          value: `⚔️ **ATK:** ${card.stats.atk}\n🩸 **HP:** ${card.stats.hp}\n💨 **SPD:** ${card.stats.speed}\n🛡️ **DEF:** ${card.stats.def}\n✨ **XP:** ${card.xp} / ${xpCap}`,
+          inline: false,
         },
-        { 
-          name: `Skill: ${master.skill.name} ${master.skill.icon || ""}`, 
-          value: finalSkillDesc, 
-          inline: false 
+        {
+          name: `Skill: ${master.skill.name} ${master.skill.icon || ""}`,
+          value: finalSkillDesc,
+          inline: false,
         }
       )
       .setImage(scaledImg)
-      .setFooter({ text: `Card Index: #${indexInput} | ID: ${master.pokeId}` });
+      .setFooter({ text: `Inventory ID: #${indexInput} | Card ID: ${master.pokeId}` });
 
     return message.reply({ embeds: [embed] });
-
   } catch (error) {
     console.error(error);
     message.reply("Error viewing card.");

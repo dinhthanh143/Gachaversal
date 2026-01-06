@@ -1,3 +1,4 @@
+const {Cards} = require("./db")
 function getRarityStars(rarity) {
   if(rarity === 6){
     return "<:rarity_ultra:1447882692631724115>"
@@ -59,9 +60,28 @@ function getSkillDescription(skillData, rarity) {
   return wrapSkillDescription(rawText);
 }
 
+
+async function getNextUid(userId) {
+  // 1. Get all used UIDs for this user, sorted
+  const cards = await Cards.find({ ownerId: userId }).select("uid").sort({ uid: 1 });
+  
+  // 2. Iterate to find the first gap
+  let expected = 1;
+  for (const card of cards) {
+    if (card.uid && card.uid === expected) {
+      expected++;
+    } else if (card.uid && card.uid > expected) {
+      // Found a gap! (e.g. card.uid is 4, but we expected 3)
+      return expected;
+    }
+  }
+  return expected; 
+}
+
 module.exports = {
   getRarityStars,
   wrapSkillDescription,
   getSkillDescription,
-  getThreatRarity
+  getThreatRarity,
+  getNextUid
 };

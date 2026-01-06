@@ -1,6 +1,6 @@
 const { UserContainer, Inventory, Cards, Index } = require("../db");
 const items = require("./items"); 
-const { getRarityStars } = require("../functions");
+const { getRarityStars, getNextUid } = require("../functions");
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -116,9 +116,10 @@ async function useitem(message) {
         const fixedRarity = 5; 
 
         const uniqueStats = calculateStats(baseData.stats, fixedRarity);
-
+        const nextUid = await getNextUid(userId)
         await Cards.create({
             ownerId: userId,
+            uid: nextUid,
             cardId: baseData.pokeId,
             stats: uniqueStats,
             rarity: fixedRarity,

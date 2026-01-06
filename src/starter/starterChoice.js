@@ -1,5 +1,6 @@
 const { Index, Cards, UserContainer, Inventory } = require("../db");
-const { getRarityStars } = require("../functions");
+// ✅ Added getNextUid import
+const { getRarityStars, getNextUid } = require("../functions");
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -13,7 +14,7 @@ const {
 // ==========================================
 const STARTER_IDS = [4, 9, 10, 12, 20]; 
 const FIXED_RARITY = 4;
-const TIMEOUT_MS = 300000; // 5 Minutes
+const TIMEOUT_MS = 300000; // 5 Min
 
 function formatImage(url) {
   if (!url) return null;
@@ -128,9 +129,13 @@ async function starterChoice(message) {
           const selectedChar = starters[currentIndex];
           const finalStats = calculateStats(selectedChar.stats, FIXED_RARITY);
 
-          // Create Card
+          // ✅ 1. Get Next Unique ID
+          const nextUid = await getNextUid(userId);
+
+          // ✅ 2. Create Card with UID
           const newCard = await Cards.create({
             ownerId: userId,
+            uid: nextUid, // ADDED HERE
             cardId: selectedChar.pokeId,
             stats: finalStats,
             rarity: FIXED_RARITY,
@@ -138,7 +143,6 @@ async function starterChoice(message) {
             xp: 0
           });
 
-          // ✅ FIXED: USE FIND + SAVE (Avoids Duplicate Key Error)
           const userToUpdate = await UserContainer.findOne({ userId: userId });
           if (userToUpdate) {
             userToUpdate.selectedCard = newCard._id;
@@ -154,7 +158,7 @@ async function starterChoice(message) {
             .setTitle(`🎉 **Adventure Started!**`)
             .setDescription(`You have selected **${selectedChar.name}** as your starter!`)
             .setImage(selectedChar.image)
-            .addFields({ name: "Reward", value: `${getRarityStars(FIXED_RARITY)} **${selectedChar.name}**`, inline: true });
+            .addFields({ name: "Reward", value: `${getRarityStars(FIXED_RARITY)} **${selectedChar.name}** (#${nextUid})`, inline: true });
 
           await msg.edit({ content: null, embeds: [successEmbed], components: [] });
           collector.stop("confirmed");
