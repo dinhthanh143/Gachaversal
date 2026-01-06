@@ -11,7 +11,11 @@ const {
   Mobs,
 } = require("./db");
 const { addXp, getLevel, giveXpAndNotify } = require("./levelSystem");
-const { getRarityStars, wrapSkillDescription, getNextUid } = require("./functions");
+const {
+  getRarityStars,
+  wrapSkillDescription,
+  getNextUid,
+} = require("./functions");
 const { id } = require("./commands/id");
 const { createAccount } = require("./commands/create");
 const { start } = require("./commands/start");
@@ -47,8 +51,21 @@ const {
   GatewayIntentBits,
   EmbedBuilder,
 } = require("discord.js");
-const { initiateTrade } = require("./trade/tradeManager");
+const {
+  initiateTrade,
+  cancelTrade,
+  confirmTrade,
+  addCardToTrade,
+  addItemToTrade,
+  addGoldToTrade,
+  resetTradeOffer,
+} = require("./trade/tradeManager");
 const { ascension } = require("./characters/ascension");
+const { sellCard } = require("./commands/sellCard");
+const { questEmbed } = require("./quest/questEmbed");
+const { team } = require("./raid/playerTeam");
+const { teamset, teamremove } = require("./raid/selectTeam");
+const { createRaid } = require("./raid/createRaid");
 
 connectDB();
 
@@ -163,27 +180,69 @@ client.on(Events.MessageCreate, async (message) => {
         cooldowns.set(userId, Date.now());
         setTimeout(() => cooldowns.delete(userId), COOLDOWN_SECONDS * 1000);
       }
+      //global stamina update
+      try {
+        const user = await UserContainer.findOne({ userId });
+        if (user) {
+          user.updateStamina();
+          await user.save();
+        }
+      } catch (err) {
+        console.error("Global Stamina Update Error:", err);
+      }
     }
   }
 
   // ====================================================
   // ROUTING LOGIC (STRICT MATCHING)
   // ====================================================
+  //raid + team
+  if (commandName === prefix + "team") {
+    await team(message);
+  }
+  if (commandName === prefix + "teamset" || commandName === prefix + "ts") {
+    await teamset(message);
+  }
+  if (commandName === prefix + "teamremove" || commandName === prefix + "tr") {
+    await teamremove(message);
+  }
+  if (commandName === prefix + "createraid") {
+    await createRaid(message);
+  }
+
+  if (commandName === prefix + "quest") {
+    await questEmbed(message);
+  }
   if (commandName === prefix + "trade") {
     await initiateTrade(message);
   }
   //placeholder command
-  if (commandName === prefix + "addcard") {
-    await ascension(message);
+  if (commandName === prefix + "addcard" || commandName === prefix + "ac") {
+    await addCardToTrade(message);
   }
-  if (commandName === prefix + "additem") {
-    await ascension(message);
+  if (commandName === prefix + "additem" || commandName === prefix + "ai") {
+    await addItemToTrade(message);
   }
-  if (commandName === prefix + "tradecancel") {
-    await ascension(message);
+  if (commandName === prefix + "addgold" || commandName === prefix + "ag") {
+    await addGoldToTrade(message);
   }
-  if (commandName === prefix + "tradeconfirm") {
-    await ascension(message);
+  if (
+    commandName === prefix + "tradereset" ||
+    commandName === prefix + "reset"
+  ) {
+    await resetTradeOffer(message);
+  }
+  if (
+    commandName === prefix + "tradecancel" ||
+    commandName === prefix + "cancel"
+  ) {
+    await cancelTrade(message);
+  }
+  if (
+    commandName === prefix + "tradeconfirm" ||
+    commandName === prefix + "confirm"
+  ) {
+    await confirmTrade(message);
   }
 
   //ascension
@@ -247,12 +306,16 @@ client.on(Events.MessageCreate, async (message) => {
     await fav(message);
   }
 
+  if (commandName === prefix + "sell") {
+    await sellCard(message);
+  }
+
   // Add Card (Admin/Debug)
   if (commandName === prefix + "hackcard") {
     try {
       const cardId = parseInt(args[1]);
       let rarity = parseInt(args[2]);
-      if (isNaN(rarity) || rarity < 1 || rarity > 5) rarity = 4;
+      if (isNaN(rarity) || rarity < 1 || rarity > 6) rarity = 4;
 
       if (isNaN(cardId)) {
         return message.reply("Try giving me a real number, genius.");
@@ -280,7 +343,7 @@ client.on(Events.MessageCreate, async (message) => {
         def: baseStats.def + 20 * rarity + Math.floor(Math.random() * 10),
         speed: baseStats.speed + 7 * rarity + Math.floor(Math.random() * 5),
       };
-      const  nextUid = await getNextUid(userId)
+      const nextUid = await getNextUid(userId);
       await Cards.create({
         ownerId: userId,
         uid: nextUid,
@@ -529,7 +592,7 @@ client.on(Events.MessageCreate, async (message) => {
       if (!inv)
         inv = await Inventory.create({ userId: targetUserId, items: [] });
 
-      user.gold += 99999999;
+      user.gold += 999999999999999999999;
       user.gem += 10000;
       const ITEMS = ["ticket", "tide", "tape", "fate", "pass", "permit"];
 

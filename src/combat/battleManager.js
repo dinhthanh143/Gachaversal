@@ -4,6 +4,7 @@ const { DUNGEON_AREAS } = require("../dungeon/dungeonData");
 const { Skills, checkPreAttackPassives } = require("./skills");
 const createBattleEmbed = require("../ui/combatEmbed");
 const { processBattleRewards } = require("./combatRewards");
+const { updateQuestProgress } = require("../quest/questManager"); // ✅ Imported Quest Manager
 const { EmbedBuilder } = require("discord.js");
 const {
   isUserBattling,
@@ -131,6 +132,10 @@ function formatDrops(report) {
   return fields;
 }
 
+
+// =========================================
+// ⏩ SKIP BATTLE
+// =========================================
 async function skipBattle(message, inputTimes = 1) {
   const userId = message.author.id;
 
@@ -168,23 +173,43 @@ async function skipBattle(message, inputTimes = 1) {
       );
     }
 
-    let requestedRuns = parseInt(inputTimes);
-    if (isNaN(requestedRuns) || requestedRuns < 1) requestedRuns = 1;
-    if (requestedRuns > 20) requestedRuns = 20;
+    let requestedRuns = 1;
 
-    const totalStamCost = requestedRuns * STAMINA_COST;
-    if (user.stam < totalStamCost) {
-      const possibleRuns = Math.floor(user.stam / STAMINA_COST);
-      if (possibleRuns === 0) {
-        return message.reply(
+    // 1. Handle "all" input
+    if (typeof inputTimes === "string" && inputTimes.toLowerCase() === "all") {
+      const maxPossible = Math.floor(user.stam / STAMINA_COST);
+      
+      if (maxPossible <= 0) {
+         return message.reply(
           `⚠️ Not enough Stamina for even 1 battle! (Need ${STAMINA_COST} ⚡)`
         );
       }
-      requestedRuns = possibleRuns;
+      // No limit cap here anymore, it uses all available stamina
+      requestedRuns = maxPossible;
+    } 
+    // 2. Handle specific number input
+    else {
+      requestedRuns = parseInt(inputTimes);
+      if (isNaN(requestedRuns) || requestedRuns < 1) requestedRuns = 1;
+      
+      // No MAX_BATCH_LIMIT check here anymore
+
+      const totalStamCost = requestedRuns * STAMINA_COST;
+
+      // STRICT CHECK: Return error if specific amount is requested but not enough stamina
+      if (user.stam < totalStamCost) {
+        return message.reply(
+          `⚠️ You don't have enough **${totalStamCost} ⚡** to do **${requestedRuns}** runs. You only have **${user.stam} ⚡**.`
+        );
+      }
     }
 
     const initialLevel = user.selectedCard.level;
     user.stam -= requestedRuns * STAMINA_COST;
+
+    // ✅ QUEST UPDATE (SKIP)
+    await updateQuestProgress(user, "SPEND_STAMINA", requestedRuns * STAMINA_COST, message);
+    await updateQuestProgress(user, "BATTLE_COMPLETE", requestedRuns, message);
 
     const report = await processBattleRewards(
       userId,
@@ -197,6 +222,7 @@ async function skipBattle(message, inputTimes = 1) {
     const embed = new EmbedBuilder()
       .setTitle(`⏩ Skipped ${requestedRuns} Battles`)
       .setColor("#0099ff")
+      .setAuthor({ name: `${message.author.username}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
       .setDescription(`Farmed **Stage ${areaId}-${stageId}**`)
       .addFields(
         {
@@ -219,20 +245,21 @@ async function skipBattle(message, inputTimes = 1) {
         value: `**${user.selectedCard.masterData.name}**\nLv. ${initialLevel} ➔ **Lv. ${user.selectedCard.level}**\nStats increased!`,
         inline: false,
       });
-    }
+    } 
 
     const dropFields = formatDrops(report);
     embed.addFields(dropFields);
 
     if (report.accountLevelUp) {
+      const capMsg = report.stamCapIncreased ? "and increased cap" : "";
       embed.addFields({
         name: "🎉 Account Level Up!",
-        value: `Reached **Lv. ${user.level}**!\n(+${report.lvlUpGold} Gold, +${report.lvlUpTickets} Tickets)`,
+        value: `Reached **Lv. ${user.level}**!\n(+${report.lvlUpGold} Gold, +${report.lvlUpTickets} Tickets, Stamina fully refilled ${capMsg}!)`,
         inline: false,
       });
     }
 
-    return message.channel.send({ embeds: [embed] });
+    return message.reply({ embeds: [embed] });
   } catch (err) {
     console.error(err);
     message.reply("Error processing skip battle.");
@@ -637,6 +664,11 @@ async function startBattle(message) {
     // --- REWARDS ON WIN ---
     if (playerWon) {
       user.stam -= STAMINA_COST;
+
+      // ✅ QUEST UPDATE (START BATTLE)
+      await updateQuestProgress(user, "SPEND_STAMINA", STAMINA_COST, message);
+      await updateQuestProgress(user, "BATTLE_COMPLETE", 1, message);
+
       const report = await processBattleRewards(
         userId,
         user,
@@ -724,6 +756,7 @@ async function startBattle(message) {
       await message.channel.send({ embeds: [winEmbed] });
 
       if (report.accountLevelUp) {
+        const capDisplay = report.stamCapIncreased ? "(+2 Cap)" : "(Max Cap)";
         const lvlEmbed = new EmbedBuilder()
           .setColor("#00FF00")
           .setAuthor({
@@ -731,11 +764,13 @@ async function startBattle(message) {
             iconURL: message.author.displayAvatarURL({ dynamic: true }),
           })
           .setTitle("🎉 ACCOUNT LEVEL UP!")
-          .setDescription(`Congratstulation ${message.author.username}! You reached **Level ${user.level}**!`)
+          .setDescription(
+            `Congratstulation ${message.author.username}! You reached **Level ${user.level}**!`
+          )
           .addFields(
             {
               name: "⚡ Stamina Refilled",
-              value: `Current: **${user.stam}/${user.stamCap}** (+2 Cap)`,
+              value: `Current: **${user.stam}/${user.stamCap}** ${capDisplay}`,
               inline: true,
             },
             {
@@ -749,12 +784,13 @@ async function startBattle(message) {
               inline: true,
             }
           );
-        await message.channel.send({ embeds: [lvlEmbed] });
+        await message.reply({ embeds: [lvlEmbed] });
       }
     } else {
       user.stam -= 2;
       await user.save();
-      let lossReason = turn > MAX_TURNS ? "Time Limit Exceeded" : "Knocked Out";
+      let lossReason =
+        turn > MAX_TURNS ? "Time Limit Exceeded" : "Knocked Out";
       await message.reply(
         `💀 **Defeat (${lossReason})...**\n${player.name} fell in battle. You lost 2 Stamina.`
       );

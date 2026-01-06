@@ -100,7 +100,8 @@ async function profile(message) {
         );
       }
     }
-
+    user.updateStamina();
+    await user.save();
     const userCards = await Cards.find({ ownerId: userId });
 
     let selectedCard = null;

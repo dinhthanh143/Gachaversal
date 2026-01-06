@@ -9,11 +9,12 @@ balanced cards data
 ==================================
 to-do:
 stamina for each battle (scaled off threat level)
+check in index user in mongo before everything
+
 ==================================
 extra:
-miyabi - spd scale
-galbrena - hp scale
-
+sword of divine : checks at turn start
+current sbt cant "all " and no check missing stam
 =========================
 card sorting: 
 useitem, view, select, invcard
@@ -26,4 +27,13 @@ mobs: 0.03/level
 default skill
 strike : power strike
 buffs (atk, def) : xxx
+
+
+dupable skills:
+reducing def/atk
+overload
+executioner
+trickroom
+dice
+
 

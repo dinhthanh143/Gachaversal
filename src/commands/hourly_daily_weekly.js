@@ -1,4 +1,5 @@
 const { UserContainer, Inventory } = require("../db");
+const { updateQuestProgress } = require("../quest/questManager");
 
 // ==========================
 // HOURLY COMMAND
@@ -22,17 +23,24 @@ async function hourly(message) {
       const mins = Math.ceil(remaining / (1000 * 60));
       return message.reply(`Come back in **${mins} minutes** to claim again.`);
     }
+
     let stamCheck = "";
     const reward = 1000;
     let stamReward = 500;
+    
+    // Check Stamina Cap
     if (user.stam >= user.stamCap) {
       stamReward = 0;
-      stamCheck = "(Maxed)"
+      stamCheck = "(Maxed)";
     }
+
     user.stam += stamReward;
     user.gold += reward;
     user.lastHourly = now;
     await user.save();
+
+    // ✅ QUEST UPDATE: Hourly Claim
+    await updateQuestProgress(user, "HOURLY_CLAIM", 1, message);
 
     message.reply(`You collected **${reward} 💰** and ${stamReward} Stamina${stamCheck}!`);
   } catch (err) {
@@ -67,7 +75,7 @@ async function daily(message) {
       );
     }
 
-    // 2. Add Gold
+    // 2. Add Currency
     const goldReward = 15000;
     const diamondReward = 5;
     user.gold += goldReward;
@@ -79,13 +87,20 @@ async function daily(message) {
       inv = await Inventory.create({ userId, items: [] });
     }
 
-    // Find gacha_ticket and add 2
+    // 3. Add Items (Tickets & Grand Blessings)
+    const ticketReward = 2;
+    const blessingReward = 2;
+    const blessingId = "b3"; // Grand Blessing
+
+    // -- Add Tickets --
     const ticketIndex = inv.items.findIndex((i) => i.itemId === "ticket");
-    if (ticketIndex > -1) {
-      inv.items[ticketIndex].amount += 2;
-    } else {
-      inv.items.push({ itemId: "ticket", amount: 2 });
-    }
+    if (ticketIndex > -1) inv.items[ticketIndex].amount += ticketReward;
+    else inv.items.push({ itemId: "ticket", amount: ticketReward });
+
+    // -- Add Blessings (b3) --
+    const blessIndex = inv.items.findIndex((i) => i.itemId === blessingId);
+    if (blessIndex > -1) inv.items[blessIndex].amount += blessingReward;
+    else inv.items.push({ itemId: blessingId, amount: blessingReward });
 
     // 5. Save Everything
     user.lastDaily = now;
@@ -94,10 +109,11 @@ async function daily(message) {
 
     message.reply(
       `🌞 **Daily Claimed!**\n` +
-        `💰 +${goldReward} Gold\n` +
+        `💰 +${goldReward.toLocaleString()} Gold\n` +
         `💎 +${diamondReward} Diamond\n` +
         `⚡ Stamina fully refilled\n` +
-        `🎫 +2 Summon Tickets`
+        `🎫 +${ticketReward} Summon Tickets\n` +
+        `💫 +${blessingReward} Grand Blessings`
     );
   } catch (err) {
     console.error("Daily error:", err);
@@ -105,7 +121,9 @@ async function daily(message) {
   }
 }
 
-
+// ==========================
+// WEEKLY COMMAND
+// ==========================
 async function weekly(message) {
   try {
     const userId = message.author.id;
@@ -133,8 +151,10 @@ async function weekly(message) {
     const goldReward = 50000;
     const diamondReward = 30;
     const ticketReward = 4;
-    const blessingReward = 3;
-    const blessingId = "b3"; // Grand Blessing
+    
+    // ✅ CHANGED: Now gives 1 Divine Blessing (b4) instead of 3 Grand (b3)
+    const blessingReward = 1;
+    const blessingId = "b4"; 
 
     // Apply Currency
     user.gold += goldReward;
@@ -149,7 +169,7 @@ async function weekly(message) {
     if (ticketItem) ticketItem.amount += ticketReward;
     else inv.items.push({ itemId: "ticket", amount: ticketReward });
 
-    // Add Grand Blessings
+    // Add Divine Blessing
     const blessingItem = inv.items.find((i) => i.itemId === blessingId);
     if (blessingItem) blessingItem.amount += blessingReward;
     else inv.items.push({ itemId: blessingId, amount: blessingReward });
@@ -164,11 +184,12 @@ async function weekly(message) {
         `💰 +${goldReward.toLocaleString()} Gold\n` +
         `💎 +${diamondReward} Gems\n` +
         `🎫 +${ticketReward} Summon Tickets\n` +
-        `💫 +${blessingReward} Grand Blessings`
+        `💠 +${blessingReward} Divine Blessing`
     );
   } catch (err) {
     console.error("Weekly error:", err);
     message.reply("Something went wrong with claiming your weekly.");
   }
 }
+
 module.exports = { hourly, daily, weekly };

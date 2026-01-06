@@ -80,7 +80,7 @@ async function banners(message) {
       .addFields(
         {
           name: `⭐ Featured Banner`,
-          value: `Limited Time Rate-Up (Resets every 3h).\n${THIN_LINE}`,
+          value: `Limited Time Rate-Up (Resets every 2h).\n${THIN_LINE}`,
           inline: false,
         },
         {

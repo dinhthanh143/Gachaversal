@@ -1,5 +1,6 @@
 const { Index, UserContainer, Cards, Inventory, SBanner } = require("../db");
 const { getNextUid } = require("../functions"); // ✅ Imported
+const { updateQuestProgress } = require('../quest/questManager'); // ✅ Imported
 const {
   generateTenPullImage,
   generateSinglePullImage,
@@ -47,16 +48,13 @@ const BANNER_NAMES = {
 // 🛠️ HELPERS
 // ==========================================
 
-// Helper to get a batch of UIDs for 10-pulls (Handles gap filling locally)
 async function getBatchUids(userId, amount) {
-  // Fetch all existing UIDs
   const userCards = await Cards.find({ ownerId: userId }).select("uid").sort({ uid: 1 });
   const usedIds = new Set(userCards.map(c => c.uid).filter(id => id != null));
   
   const freeIds = [];
   let candidate = 1;
   
-  // Find 'amount' number of free slots
   while (freeIds.length < amount) {
     if (!usedIds.has(candidate)) {
       freeIds.push(candidate);
@@ -88,7 +86,6 @@ function calculateStats(baseStats, rarity) {
   };
 }
 
-// --- SHARED PULL LOGIC ---
 async function performPullLogic(userId, bannerType, user) {
   let currentPity = user.pity || 0;
   const rarity = determineRarity(currentPity);
@@ -126,7 +123,6 @@ async function performPullLogic(userId, bannerType, user) {
       rarity: rarity,
       level: 1,
       xp: 0,
-      // uid is assigned later
     };
   } else {
     resultCard = { name: "Error", rarity: 1, image: null };
@@ -165,12 +161,14 @@ async function executeSinglePull(interaction, bannerType, ticketType) {
   item.amount -= 1;
   await inv.save();
 
+  // ✅ QUEST UPDATE: Single Pull
+  await updateQuestProgress(user, "GACHA_PULL", 1, interaction);
+
   const { resultCard, dbEntry, newPity } = await performPullLogic(userId, bannerType, user);
   user.pity = newPity;
   await user.save();
 
   if (dbEntry) {
-    // ✅ Use getNextUid for single pull
     dbEntry.uid = await getNextUid(userId);
     await Cards.create(dbEntry);
   }
@@ -216,7 +214,9 @@ async function executeTenPull(interaction, bannerType, ticketType) {
   item.amount -= 10;
   await inv.save();
 
-  // ✅ Get 10 Available UIDs (filling gaps first)
+  // ✅ QUEST UPDATE: 10 Pulls
+  await updateQuestProgress(user, "GACHA_PULL", 10, interaction);
+
   const availableUids = await getBatchUids(userId, 10);
 
   const pulls = [];
@@ -228,7 +228,6 @@ async function executeTenPull(interaction, bannerType, ticketType) {
     pulls.push(res.resultCard);
     
     if (res.dbEntry) {
-      // ✅ Assign pre-calculated UID
       res.dbEntry.uid = availableUids[i];
       saves.push(res.dbEntry);
     }
@@ -291,7 +290,9 @@ async function executeSpecificPull(interaction, bannerType, icon, amount = 1) {
   item.amount -= amount;
   await inv.save();
 
-  // ✅ Get batch UIDs if amount > 1, else standard getNextUid will be used or just a batch of 1
+  // ✅ QUEST UPDATE: Featured Pulls (amount varies 1 or 10)
+  await updateQuestProgress(user, "GACHA_PULL", amount, interaction);
+
   const availableUids = await getBatchUids(userId, amount);
 
   const pulls = [];
@@ -309,12 +310,10 @@ async function executeSpecificPull(interaction, bannerType, icon, amount = 1) {
     let cardData = null;
 
     if (rarity === 6) {
-      // 🌈 6-STAR: GUARANTEED FEATURED
       console.log(`[6★ PULL] User: ${user.userId} | 6-Star Drop! Guaranteed Featured.`);
       cardData = await Index.findOne({ pokeId: featuredId });
     } 
     else if (rarity === 5) {
-      // ⭐ 5-STAR: 50/50 LOGIC
       const isGuaranteed = user.guaranteed === 1;
       const won5050 = Math.random() < 0.5;
 
@@ -334,7 +333,6 @@ async function executeSpecificPull(interaction, bannerType, icon, amount = 1) {
         user.guaranteed = 1; // SET GUARANTEE
       }
     } else {
-      // Standard 3/4 Star
       const randomAgg = await Index.aggregate([{ $sample: { size: 1 } }]);
       if (randomAgg.length > 0) cardData = randomAgg[0];
     }
@@ -351,7 +349,7 @@ async function executeSpecificPull(interaction, bannerType, icon, amount = 1) {
     });
     saves.push({
       ownerId: userId,
-      uid: availableUids[i], // ✅ Assign pre-calculated UID
+      uid: availableUids[i],
       cardId: cardData.pokeId,
       stats: uniqueStats,
       rarity: rarity,

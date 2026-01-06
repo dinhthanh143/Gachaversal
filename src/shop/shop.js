@@ -65,7 +65,7 @@ async function shop(message) {
 
           embed.addFields({
             name: `${item.emoji} ${item.name} \`(${item.itemId})\``,
-            value: `> 🏷️ Price: **${item.price}** ${currencyIcon}\n${LINE_THIN}`,
+            value: `> 🏷️ Price: **${item.price}** ${currencyIcon}\n Desc: ${item.description} \n${LINE_THIN}`,
             inline: false,
           });
         });

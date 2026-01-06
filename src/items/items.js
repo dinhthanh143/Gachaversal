@@ -16,48 +16,49 @@ module.exports = {
   },
   b1: {
     name: "Minor Blessing",
-    description: "Grants **1,200 XP** for a card.",
+    description: "Grants **1,800 XP** for a card.",
     emoji: "✨",
     type: "Consumable",
     price: 500,
     currency: "gold",
-    xpAmount: 1200,
+    xpAmount: 1800,
   },
 
   b2: {
     name: "Major Blessing",
-    description: "Grants **12,000 XP** for a card.",
+    description: "Grants **18,000 XP** for a card.",
     emoji: "🌟",
     type: "Consumable",
     price: 4500,
     currency: "gold",
-    xpAmount: 12000,
+    xpAmount: 18000,
   },
 
   b3: {
     name: "Grand Blessing",
-    description: "Grants **60,000 XP** for a card.",
+    description: "Grants **90,000 XP** for a card.",
     emoji: "💫",
     type: "Consumable",
     price: 20000,
     currency: "gold",
-    xpAmount: 60000,
+    xpAmount: 90000,
   },
 
   b4: {
     name: "Divine Blessing",
-    description: "Grants **300,000 XP** for a card.",
+    description: "Grants **450,000 XP** for a card.",
     emoji: "💠",
     type: "Consumable",
     price: 90000,
     currency: "gold",
-    xpAmount: 300000,
+    xpAmount: 450000,
   },
+
 
   // --- Gacha Items ---
   ticket: {
     name: "Summon Ticket",
-    description: "Used to pull on standard banner.",
+    description: "Used to pull on standard and featured banner.",
     emoji: "🎫",
     type: "Gacha",
     price: 8,
@@ -68,7 +69,7 @@ module.exports = {
     description: "Used to convene for Resonators.",
     emoji: "<:wuwaPull:1453226896329412770>",
     type: "Gacha",
-    price: 10,
+    price: 8,
     currency: "gem",
   },
   tape: {
@@ -76,7 +77,7 @@ module.exports = {
     description: "Used for Signal Search.",
     emoji: "<:zzzPull:1453233952151310478>",
     type: "Gacha",
-    price: 10,
+    price: 8,
     currency: "gem",
   },
   fate: {
@@ -84,7 +85,7 @@ module.exports = {
     description: "Used to Wish.",
     emoji: "<:genshinPull:1453234890416984207>",
     type: "Gacha",
-    price: 10,
+    price: 8,
     currency: "gem",
   },
   pass: {
@@ -92,7 +93,7 @@ module.exports = {
     description: "Used to Warp.",
     emoji: "<:hsrPull:1453226721632587849>",
     type: "Gacha",
-    price: 10,
+    price: 8,
     currency: "gem",
   },
   permit: {
@@ -100,7 +101,7 @@ module.exports = {
     description: "Used to recuit Operators.",
     emoji: "<:permit:1454862332374155366>",
     type: "Gacha",
-    price: 10,
+    price: 8,
     currency: "gem",
   },
 };

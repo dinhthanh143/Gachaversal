@@ -260,7 +260,7 @@ async function inv(message) {
 
     if (userItems.length === 0) return message.reply("Your inventory is empty! Go get some loot.");
 
-    const pageSize = 10;
+    const pageSize = 7;
     let page = 0;
     const totalPages = Math.ceil(userItems.length / pageSize);
 

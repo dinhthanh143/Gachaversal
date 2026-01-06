@@ -1,7 +1,7 @@
 const { Cards, Index, Inventory } = require("../db");
 const { getFixedCardXp, getCardLevelCap } = require("../dungeon/dungeonData");
-// ✅ Import getNextUid
 const { getNextUid } = require("../functions");
+const { updateQuestProgress } = require("../quest/questManager"); // ✅ Import Quest Manager
 
 // ==========================================
 // 1. CONFIGURATION & HELPERS
@@ -20,13 +20,13 @@ const BLESSINGS = {
   b1: { name: "Minor Blessing", chance: 20, minThreat: 1 },
   b2: { name: "Major Blessing", chance: 8, minThreat: 1 },
   b3: { name: "Grand Blessing", chance: 1, minThreat: 2 },
-  b4: { name: "Divine Blessing", chance: 0.5, minThreat: 3 }
+  b4: { name: "Divine Blessing", chance: 0.5, minThreat: 3 },
 };
 
 // ✅ STAT CALCULATION
 function calculateStats(baseStats, rarity) {
   const b = baseStats || { hp: 75, atk: 60, def: 50, speed: 69 };
-  const r = typeof rarity === 'number' ? rarity : 1;
+  const r = typeof rarity === "number" ? rarity : 1;
 
   return {
     hp: Math.floor(b.hp * (3 + r) + r * 20 + Math.floor(Math.random() * 20)),
@@ -41,14 +41,14 @@ function rollDropRarity(threatLevel) {
   const rand = Math.random() * 100;
   let chance3 = 5;
   let chance2 = 20;
-  
+
   if (threatLevel > 1) {
-      const scale = (threatLevel - 1) * 5;
-      chance3 += scale;
-      chance2 += (scale / 2); 
+    const scale = (threatLevel - 1) * 5;
+    chance3 += scale;
+    chance2 += scale / 2;
   }
 
-  chance3 = Math.min(chance3, 50); 
+  chance3 = Math.min(chance3, 50);
   chance2 = Math.min(chance2, 40);
 
   if (rand < chance3) return 3;
@@ -58,30 +58,46 @@ function rollDropRarity(threatLevel) {
 
 // Roll Item Drop
 function rollItemDrop(threatLevel) {
-    const rand = Math.random() * 100;
-    const threatMult = 1 + (threatLevel * 0.5);
+  const rand = Math.random() * 100;
+  const threatMult = 1 + threatLevel * 0.5;
 
-    if (threatLevel >= BLESSINGS.b4.minThreat && rand < (BLESSINGS.b4.chance * threatMult)) return "b4";
-    if (threatLevel >= BLESSINGS.b3.minThreat && rand < (BLESSINGS.b3.chance * threatMult)) return "b3";
-    if (rand < (BLESSINGS.b2.chance * threatMult)) return "b2";
-    if (rand < (BLESSINGS.b1.chance * threatMult)) return "b1";
-    return null; 
+  if (
+    threatLevel >= BLESSINGS.b4.minThreat &&
+    rand < BLESSINGS.b4.chance * threatMult
+  )
+    return "b4";
+  if (
+    threatLevel >= BLESSINGS.b3.minThreat &&
+    rand < BLESSINGS.b3.chance * threatMult
+  )
+    return "b3";
+  if (rand < BLESSINGS.b2.chance * threatMult) return "b2";
+  if (rand < BLESSINGS.b1.chance * threatMult) return "b1";
+  return null;
 }
 
 // ==========================================
 // 2. MAIN REWARD PROCESSOR
 // ==========================================
-async function processBattleRewards(userId, user, playerCard, stageData, loops = 1) {
+async function processBattleRewards(
+  userId,
+  user,
+  playerCard,
+  stageData,
+  loops = 1,
+  message = null // ✅ Added optional message param for quest replies
+) {
   const report = {
     gold: 0,
     cardXp: 0,
     accountXp: 0,
     levelsGained: 0,
-    drops: [],      
-    itemDrops: [],  
+    drops: [],
+    itemDrops: [],
     accountLevelUp: false,
     lvlUpGold: 0,
-    lvlUpTickets: 0
+    lvlUpTickets: 0,
+    stamCapIncreased: false,
   };
 
   const mobTemplate = stageData.mobs[0];
@@ -90,9 +106,9 @@ async function processBattleRewards(userId, user, playerCard, stageData, loops =
 
   // --- A. RESOURCE CALCULATION ---
   for (let i = 0; i < loops; i++) {
-    report.gold += (mobTemplate.rewards.gold || 100);
+    report.gold += mobTemplate.rewards.gold || 100;
     report.cardXp += getFixedCardXp(difficulty);
-    report.accountXp += (15 + (user.dungeon.currentArea || 1) * 5);
+    report.accountXp += 15 + (user.dungeon.currentArea || 1) * 5;
   }
 
   // --- B. CARD LEVELING ---
@@ -104,18 +120,23 @@ async function processBattleRewards(userId, user, playerCard, stageData, loops =
     playerCard.xp -= xpToNext;
     playerCard.level++;
     report.levelsGained++;
+    
+    // ✅ QUEST UPDATE: Card Level Up
+    // If message is null, it just updates DB without replying.
+    await updateQuestProgress(user, "CARD_LEVEL_UP", 1, message);
+
     playerCard.stats.hp = Math.floor(playerCard.stats.hp * 1.02);
     playerCard.stats.atk = Math.floor(playerCard.stats.atk * 1.015);
     playerCard.stats.def = Math.floor(playerCard.stats.def * 1.013);
     playerCard.stats.speed = Math.floor(playerCard.stats.speed * 1.01);
     xpToNext = getCardLevelCap(playerCard.level);
   }
-  
+
   if (playerCard.level >= maxLevel) {
-      playerCard.xp = 0; 
-      playerCard.xpCap = 0; 
+    playerCard.xp = 0;
+    playerCard.xpCap = 0;
   } else {
-      playerCard.xpCap = xpToNext;
+    playerCard.xpCap = xpToNext;
   }
 
   // --- C. ACCOUNT LEVELING ---
@@ -126,9 +147,12 @@ async function processBattleRewards(userId, user, playerCard, stageData, loops =
     user.xp -= 100 + (user.level - 1) * 10;
     user.level++;
     report.accountLevelUp = true;
-    user.stamCap += 2;
+    if (user.stamCap  < 150 && user.level % 2 == 0) {
+      user.stamCap += 2;
+      report.stamCapIncreased = true;
+    }
     user.stam += user.stamCap;
-    
+
     const goldGain = 5000 + user.level * 500;
     report.lvlUpGold += goldGain;
     user.gold += goldGain;
@@ -145,42 +169,42 @@ async function processBattleRewards(userId, user, playerCard, stageData, loops =
   }
 
   // --- D. BATTLE DROPS (SAME CARD FIX) ---
-  
+
   // 1. Fetch ONE random card (Base Card)
   const randomCardAgg = await Index.aggregate([{ $sample: { size: 1 } }]);
-  const baseData = (randomCardAgg && randomCardAgg.length > 0) ? randomCardAgg[0] : null;
+  const baseData =
+    randomCardAgg && randomCardAgg.length > 0 ? randomCardAgg[0] : null;
 
   for (let i = 0; i < loops; i++) {
-    
     // -- Card Drop (Copies of the same Base Card) --
     if (baseData) {
-        const dropRarity = rollDropRarity(threatLevel);
-        const uniqueStats = calculateStats(baseData.stats, dropRarity);
-        
-        // ✅ CALCULATE NEXT UID HERE
-        const nextUid = await getNextUid(userId);
+      const dropRarity = rollDropRarity(threatLevel);
+      const uniqueStats = calculateStats(baseData.stats, dropRarity);
 
-        await Cards.create({
-            ownerId: userId,
-            uid: nextUid, // Assign Persistent ID
-            cardId: baseData.pokeId,
-            stats: uniqueStats,
-            rarity: dropRarity,
-            level: 1,
-            xp: 0
-        });
-        report.drops.push(`${baseData.name} (${"⭐".repeat(dropRarity)})`);
+      // ✅ CALCULATE NEXT UID HERE
+      const nextUid = await getNextUid(userId);
+
+      await Cards.create({
+        ownerId: userId,
+        uid: nextUid, // Assign Persistent ID
+        cardId: baseData.pokeId,
+        stats: uniqueStats,
+        rarity: dropRarity,
+        level: 1,
+        xp: 0,
+      });
+      report.drops.push(`${baseData.name} (${"⭐".repeat(dropRarity)})`);
     }
 
     // -- Item Drop --
     const itemDropId = rollItemDrop(threatLevel);
     if (itemDropId) {
-        const itemData = BLESSINGS[itemDropId];
-        report.itemDrops.push({ id: itemDropId, name: itemData.name });
-        
-        const invItem = userInv.items.find(i => i.itemId === itemDropId);
-        if (invItem) invItem.amount++;
-        else userInv.items.push({ itemId: itemDropId, amount: 1 });
+      const itemData = BLESSINGS[itemDropId];
+      report.itemDrops.push({ id: itemDropId, name: itemData.name });
+
+      const invItem = userInv.items.find((i) => i.itemId === itemDropId);
+      if (invItem) invItem.amount++;
+      else userInv.items.push({ itemId: itemDropId, amount: 1 });
     }
   }
 

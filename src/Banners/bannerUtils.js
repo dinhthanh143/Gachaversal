@@ -2,7 +2,7 @@ const { SBanner, Index } = require("../db");
 
 async function getFeaturedBanner() {
   const now = Date.now();
-  const EIGHT_HOURS = 3 * 60 * 60 * 1000;
+  const EIGHT_HOURS = 2 * 60 * 60 * 1000;
 
   let bannerState = await SBanner.findOne({ id: "current_banner" });
 

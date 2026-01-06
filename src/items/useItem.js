@@ -1,5 +1,5 @@
 const { UserContainer, Inventory, Cards, Index } = require("../db");
-const items = require("./items"); 
+const items = require("./items"); // Adjust path if needed
 const { getRarityStars, getNextUid } = require("../functions");
 const {
   EmbedBuilder,
@@ -43,33 +43,20 @@ function calculateStats(baseStats, rarity) {
 }
 
 // ==========================================
-// 2. HELPER: Get Sorted Cards
-// ==========================================
-async function getSortedUserCards(userId) {
-  const userCards = await Cards.find({ ownerId: userId })
-    .populate("masterData")
-    // ✅ FIX: Sort by ID (Ascending) to match !cards inventory
-    .sort({ _id: 1 }); 
-
-  if (!userCards || userCards.length === 0) return [];
-  return userCards;
-}
-
-// ==========================================
-// 3. MAIN COMMAND
+// 2. MAIN COMMAND
 // ==========================================
 async function useitem(message) {
   try {
     const args = message.content.split(" ");
-    // Format: !useitem [itemId] [quantity] [cardIndex]
+    // Format: !useitem [itemId] [quantity] [cardUID]
     const itemIdInput = args[1];
     const qtyInput = parseInt(args[2]);
-    const cardIndexInput = args[3] ? parseInt(args[3]) : null; 
+    const cardUidInput = args[3] ? parseInt(args[3]) : null;
 
     // --- A. BASIC VALIDATION ---
     if (!itemIdInput || isNaN(qtyInput)) {
       return message.reply(
-        "**Usage:** `!useitem [item_id] [quantity] [card_index (if needed)]`"
+        "**Usage:** `!useitem [item_id] [quantity] [card_uid (if needed)]`"
       );
     }
 
@@ -146,21 +133,27 @@ async function useitem(message) {
     // 🧪 STANDARD LOGIC: XP ITEMS (BLESSINGS)
     // ====================================================
     
-    // ✅ CHECK: Card Index is REQUIRED here
-    if (cardIndexInput === null || isNaN(cardIndexInput)) {
-        return message.reply(`❌ **${itemData.name}** requires a target card.\nUsage: \`!useitem ${itemIdInput} ${qtyInput} [Card Index]\``);
+    if (cardUidInput === null || isNaN(cardUidInput)) {
+        return message.reply(`❌ **${itemData.name}** requires a target card UID.\nUsage: \`!useitem ${itemIdInput} ${qtyInput} [Card UID]\``);
     }
 
     if (!itemData.xpAmount) {
       return message.reply("❌ That item cannot be used.");
     }
 
-    // ✅ SORTED FETCH (Matches Inventory Order)
-    const sortedCards = await getSortedUserCards(userId);
-    const targetCard = sortedCards[cardIndexInput - 1]; 
+    // ✅ FIND CARD BY UID (with fallback for index if using old system)
+    const userCards = await Cards.find({ ownerId: userId }).populate("masterData").sort({ _id: 1 });
+    
+    // Attempt to find by UID first
+    let targetCard = userCards.find(c => c.uid === cardUidInput);
+    
+    // Fallback: If no UID match, check index (1-based)
+    if (!targetCard && cardUidInput <= userCards.length) {
+       targetCard = userCards[cardUidInput - 1];
+    }
 
     if (!targetCard) {
-      return message.reply(`❌ Card index **#${cardIndexInput}** not found.`);
+      return message.reply(`❌ Card with UID **#${cardUidInput}** not found.`);
     }
 
     const master = targetCard.masterData;
@@ -170,20 +163,39 @@ async function useitem(message) {
         return message.reply(`⚠️ **${master.name}** is already at the max level (**${currentRarityCap}**) for their rarity!`);
     }
 
+    // --- PRE-CALCULATE LEVEL UP (SIMULATION) ---
+    const totalXpToAdd = qtyInput * itemData.xpAmount;
+    let simLevel = targetCard.level;
+    let simXp = targetCard.xp + totalXpToAdd;
+    let simXpCap = getCardLevelCap(simLevel);
+
+    while (simXp >= simXpCap && simLevel < currentRarityCap) {
+        simXp -= simXpCap;
+        simLevel++;
+        simXpCap = getCardLevelCap(simLevel);
+    }
+    // Cap logic if max reached
+    if (simLevel >= currentRarityCap) {
+        simLevel = currentRarityCap;
+        simXp = 0; // or max
+    }
+
     // --- CONFIRMATION ---
     const confirmEmbed = new EmbedBuilder()
       .setColor("#FFFF00")
       .setTitle("Confirm Item Usage")
-      .setDescription(`Are you sure you want to use resources on this card? All the excessive XP will be loss if the card hits It's level cap.`)
+      .setDescription(`Are you sure you want to use resources on this card?`)
       .addFields(
         { 
             name: "🎒 Item", 
-            value: `**x${qtyInput} ${itemData.name}**\nTotal XP: **${(qtyInput * itemData.xpAmount).toLocaleString()}**`, 
+            value: `**x${qtyInput} ${itemData.name}**\nXP: +**${totalXpToAdd.toLocaleString()}**`, 
             inline: true 
         },
         { 
             name: "🎴 Target Card", 
-            value: `**#${cardIndexInput} ${master.name}**\n${getRarityStars(targetCard.rarity)}\nLv. **${targetCard.level}** / ${currentRarityCap}`, 
+            value: `**#${targetCard.uid} ${master.name}**\n` + 
+                   `${getRarityStars(targetCard.rarity)}\n` +
+                   `Lv. **${targetCard.level}** ➔ Lv. **${simLevel}** / ${currentRarityCap}`, 
             inline: true 
         }
       );
@@ -216,10 +228,8 @@ async function useitem(message) {
         freshItem.amount -= qtyInput;
         await freshInv.save();
 
-        // XP Logic
-        const xpToGain = qtyInput * itemData.xpAmount;
-        targetCard.xp += xpToGain;
-        
+        // Apply Real Changes
+        targetCard.xp += totalXpToAdd;
         const oldLevel = targetCard.level;
         let xpCap = getCardLevelCap(targetCard.level);
         let levelsGained = 0;
@@ -229,6 +239,7 @@ async function useitem(message) {
             targetCard.level++;
             levelsGained++;
 
+            // Update Stats per level
             targetCard.stats.hp = Math.floor(targetCard.stats.hp * 1.02);
             targetCard.stats.atk = Math.floor(targetCard.stats.atk * 1.015);
             targetCard.stats.def = Math.floor(targetCard.stats.def * 1.013);
@@ -255,11 +266,11 @@ async function useitem(message) {
             successEmbed.setDescription(`✅ Successfully used **x${qtyInput} ${itemData.name}**!\n\n` + 
                 `📈 **${master.name}** leveled up!\n` + 
                 `**Lv. ${oldLevel}** ➔ **Lv. ${targetCard.level}**\n` + 
-                `*(Gained ${xpToGain.toLocaleString()} XP)*`
+                `*(Gained ${totalXpToAdd.toLocaleString()} XP)*`
             );
         } else {
             successEmbed.setDescription(`✅ Successfully used **x${qtyInput} ${itemData.name}**!\n\n` +
-                `✨ **${master.name}** gained **${xpToGain.toLocaleString()} XP**.\n` + 
+                `✨ **${master.name}** gained **${totalXpToAdd.toLocaleString()} XP**.\n` + 
                 `Progress: **${targetCard.xp} / ${targetCard.xpCap}**`
             );
         }
