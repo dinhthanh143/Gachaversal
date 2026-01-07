@@ -13,7 +13,7 @@ const {
 // 1. CONFIGURATION
 // ==========================================
 const STARTER_IDS = [4, 9, 10, 12, 20];
-const FIXED_RARITY = 4;
+const FIXED_RARITY = 5;
 const TIMEOUT_MS = 300000; // 5 Min
 
 function formatImage(url) {

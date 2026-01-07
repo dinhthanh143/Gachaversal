@@ -33,7 +33,6 @@ const { dropCard } = require("./commands/dropCard");
 const { banners } = require("./Banners/banners");
 const { shop } = require("./shop/shop");
 const { buy } = require("./shop/buy");
-const { mobInfo, mobIndex } = require("./characters/mobUtils");
 const {
   dungeonHub,
   areaDetails,
@@ -41,7 +40,6 @@ const {
   nextStage,
 } = require("./dungeon/dungeon");
 const { startBattle, skipBattle } = require("./combat/battleManager");
-const mobData = require("./characters/mob");
 const allCharacters = require("./characters/characters");
 const { useitem } = require("./items/useItem");
 
@@ -128,8 +126,7 @@ const VALID_COMMANDS = new Set([
   "!bt",
   "!sbt",
   "!skipbattle",
-  "!mindex",
-  "!minfo",
+
   "!dungeon",
   "!area",
   "!stage",
@@ -206,7 +203,7 @@ client.on(Events.MessageCreate, async (message) => {
   if (commandName === prefix + "teamremove" || commandName === prefix + "tr") {
     await teamremove(message);
   }
-  if (commandName === prefix + "createraid") {
+  if (commandName === prefix + "createraid" || commandName === prefix + "cr") {
     await createRaid(message);
   }
 
@@ -519,12 +516,7 @@ client.on(Events.MessageCreate, async (message) => {
   if (commandName === prefix + "buy") {
     await buy(message);
   }
-  if (commandName === prefix + "mindex") {
-    await mobIndex(message);
-  }
-  if (commandName === prefix + "minfo") {
-    await mobInfo(message);
-  }
+
   if (commandName === prefix + "dungeon") {
     await dungeonHub(message);
   }

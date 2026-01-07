@@ -33,7 +33,8 @@ function calculateDamage(attacker, defender, rawDamage, isCrit = false) {
     }
   }
   const defStat = defender.stats ? defender.stats.def : 0;
-  const defenseFactor = 100 / (100 + defStat);
+  const DEF_SCALING = 0.6; // tune between 0.5–0.7
+  const defenseFactor = 100 / (100 + defStat * DEF_SCALING);
   const finalDamage = Math.max(1, Math.floor(effectiveDamage * defenseFactor));
 
   let suffix = "";
@@ -103,58 +104,65 @@ function handleDeathPrevention(unit) {
 }
 
 function checkPreAttackPassives(attacker) {
-    let log = "";
+  let log = "";
 
-    // --- WISADEL AMMO LOGIC ---
-    if (attacker.name === "Wisadel") {
-        const ammoBuff = attacker.effects ? attacker.effects.find(e => e.name === "Explosive Ammo") : null;
-        
-        if (ammoBuff && ammoBuff.amount > 0) {
-            ammoBuff.amount -= 1; // Consume
+  // --- WISADEL AMMO LOGIC ---
+  if (attacker.name === "Wisadel") {
+    const ammoBuff = attacker.effects
+      ? attacker.effects.find((e) => e.name === "Explosive Ammo")
+      : null;
 
-            // Skill Values
-            const vals = attacker.skill.values || [[4], [4]];
-            const atkInc = (Array.isArray(vals[0]) ? vals[0][0] : vals[0]) || 4;
-            const critInc = (Array.isArray(vals[1]) ? vals[1][0] : vals[1]) || 4;
+    if (ammoBuff && ammoBuff.amount > 0) {
+      ammoBuff.amount -= 1; // Consume
 
-            // Calculate Boost
-            const atkBoost = Math.floor(attacker.stats.atk * (atkInc / 100)); 
-            
-            // Apply Buffs
-            let statBuff = attacker.effects.find(e => e.name === "Wisadel Buff");
-            let currentStack = 1;
+      // Skill Values
+      const vals = attacker.skill.values || [[4], [4]];
+      const atkInc = (Array.isArray(vals[0]) ? vals[0][0] : vals[0]) || 4;
+      const critInc = (Array.isArray(vals[1]) ? vals[1][0] : vals[1]) || 4;
 
-            if (!statBuff) {
-                // Stack 1
-                addBuff(attacker, "Wisadel Buff", "atk", atkBoost, 999, 1);
-                addBuff(attacker, "Wisadel Buff", "critRate", critInc, 999, 1);
-            } else {
-                // Stack 2+
-                const buffs = attacker.effects.filter(e => e.name === "Wisadel Buff");
-                currentStack = (statBuff.extra || 1) + 1;
-                buffs.forEach(b => {
-                    b.extra = currentStack; 
-                    if (b.stat === "atk") { 
-                        b.amount += atkBoost; 
-                        attacker.stats.atk += atkBoost; 
-                    }
-                    if (b.stat === "critRate") { 
-                        b.amount += critInc; 
-                        attacker.stats.critRate += critInc; 
-                    }
-                });
-            }
+      // Calculate Boost
+      const atkBoost = Math.floor(attacker.stats.atk * (atkInc / 100));
 
-            // Read Totals for Display
-            const totalAtk = attacker.effects.find(e => e.name === "Wisadel Buff" && e.stat === "atk").amount;
-            const totalCrit = attacker.effects.find(e => e.name === "Wisadel Buff" && e.stat === "critRate").amount;
+      // Apply Buffs
+      let statBuff = attacker.effects.find((e) => e.name === "Wisadel Buff");
+      let currentStack = 1;
 
-            log = `🧨 **Wisadel** uses an ammo! (Left: **${ammoBuff.amount}**)\n` + 
-                  `Raises ATK by **${totalAtk}** (Total) and Crit Rate by **${totalCrit}%** (Total)!`;
-        }
+      if (!statBuff) {
+        // Stack 1
+        addBuff(attacker, "Wisadel Buff", "atk", atkBoost, 999, 1);
+        addBuff(attacker, "Wisadel Buff", "critRate", critInc, 999, 1);
+      } else {
+        // Stack 2+
+        const buffs = attacker.effects.filter((e) => e.name === "Wisadel Buff");
+        currentStack = (statBuff.extra || 1) + 1;
+        buffs.forEach((b) => {
+          b.extra = currentStack;
+          if (b.stat === "atk") {
+            b.amount += atkBoost;
+            attacker.stats.atk += atkBoost;
+          }
+          if (b.stat === "critRate") {
+            b.amount += critInc;
+            attacker.stats.critRate += critInc;
+          }
+        });
+      }
+
+      // Read Totals for Display
+      const totalAtk = attacker.effects.find(
+        (e) => e.name === "Wisadel Buff" && e.stat === "atk"
+      ).amount;
+      const totalCrit = attacker.effects.find(
+        (e) => e.name === "Wisadel Buff" && e.stat === "critRate"
+      ).amount;
+
+      log =
+        `🧨 **Wisadel** uses an ammo! (Left: **${ammoBuff.amount}**)\n` +
+        `Raises ATK by **${totalAtk}** (Total) and Crit Rate by **${totalCrit}%** (Total)!`;
     }
+  }
 
-    return log;
+  return log;
 }
 // =========================================
 // 4. SKILL DEFINITIONS
@@ -168,7 +176,10 @@ const Skills = {
     description: "Loads 5 Explosive Ammos.",
     execute: (attacker, defender, skillValues) => {
       addBuff(attacker, "Explosive Ammo", "ammoCount", 5, 999);
-      return { damage: 0, log: `**${attacker.name}** activates **BANG!**\nReloaded **5 Explosive Ammos**!` };
+      return {
+        damage: 0,
+        log: `**${attacker.name}** activates **BANG!**\nReloaded **5 Explosive Ammos**!`,
+      };
     },
   },
 
@@ -179,31 +190,40 @@ const Skills = {
     icon: "<:yuzuha_skill:1457214067638009956>",
     description: "Increases ATK and Energy Regen.",
     execute: (attacker, defender, skillValues = [[12], [10]]) => {
-      const atkPct = (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) || 12;
-      const erPct = (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) || 10;
+      const atkPct =
+        (Array.isArray(skillValues[0]) ? skillValues[0][0] : skillValues[0]) ||
+        12;
+      const erPct =
+        (Array.isArray(skillValues[1]) ? skillValues[1][0] : skillValues[1]) ||
+        10;
       const calcAtkBoost = Math.floor(attacker.stats.atk * (atkPct / 100));
-      const existing = attacker.effects.find(e => e.name === "Sugar Rush");
+      const existing = attacker.effects.find((e) => e.name === "Sugar Rush");
 
       if (!existing) {
-        addBuff(attacker, "Sugar Rush", "atk", calcAtkBoost, 5, 1); 
+        addBuff(attacker, "Sugar Rush", "atk", calcAtkBoost, 5, 1);
         addBuff(attacker, "Sugar Rush", "energyRegen", erPct, 5, 1);
-        return { damage: 0, log: `**${attacker.name}** uses **Sugar Rush**! (Stack 1)\nATK increased by **${calcAtkBoost}** & Energy Regen by **${erPct}%**!` };
+        return {
+          damage: 0,
+          log: `**${attacker.name}** uses **Sugar Rush**! (Stack 1)\nATK increased by **${calcAtkBoost}** & Energy Regen by **${erPct}%**!`,
+        };
       } else {
-        const allBuffs = attacker.effects.filter(e => e.name === "Sugar Rush");
+        const allBuffs = attacker.effects.filter(
+          (e) => e.name === "Sugar Rush"
+        );
         let stack = existing.extra || 1;
         let log = "";
         if (stack < 2) {
           stack++;
-          attacker.stats.atk += calcAtkBoost; 
-          allBuffs.forEach(e => {
-            e.turns = 5; 
-            e.extra = stack; 
+          attacker.stats.atk += calcAtkBoost;
+          allBuffs.forEach((e) => {
+            e.turns = 5;
+            e.extra = stack;
             if (e.stat === "atk") e.amount += calcAtkBoost;
             if (e.stat === "energyRegen") e.amount += erPct;
           });
           log = `**${attacker.name}** uses **Sugar Rush**! (Stack ${stack})\nBuffs stacked and duration reset!`;
         } else {
-          allBuffs.forEach(e => e.turns = 5);
+          allBuffs.forEach((e) => (e.turns = 5));
           log = `**${attacker.name}** uses **Sugar Rush**! (Max Stacks)\nDuration refreshed!`;
         }
         return { damage: 0, log };
@@ -235,7 +255,7 @@ const Skills = {
       const targetCurrentEnergy = defender.energy || 0;
       // We can only drain what they actually have
       const actualDrain = Math.min(targetCurrentEnergy, drainAmount);
- 
+
       defender.energy -= actualDrain;
 
       // 4. Log Generation
@@ -802,28 +822,6 @@ const Skills = {
       return { damage, log };
     },
   },
-
-  Tackle: {
-    initialEnergy: 50,
-    requiredEnergy: 100,
-    name: "Tackle",
-    icon: "💥",
-    description: "Tackles the target.",
-    execute: (attacker, defender, skillValues = 1.1) => {
-      const multiplier =
-        (Array.isArray(skillValues) ? skillValues[0] : skillValues) || 1.1;
-      const rawDamage = attacker.stats.atk * multiplier;
-      const { damage, suffix } = calculateDamage(attacker, defender, rawDamage);
-      defender.stats.hp -= damage;
-
-      let log = `**${attacker.name}** used **Tackle**! Hit for **${damage}** DMG!${suffix}`;
-      log += handleDamageStorage(defender, damage);
-      log += handleDeathPrevention(defender); // ✅ Death Check
-
-      return { damage, log };
-    },
-  },
-
   "Wind's Edge [PASSIVE]": {
     initialEnergy: 0,
     requiredEnergy: 999,
@@ -843,7 +841,7 @@ const Skills = {
     },
   },
 
- "Basic Attack": {
+  "Basic Attack": {
     name: "Basic Attack",
     icon: "🗡️",
     execute: (attacker, defender) => {
@@ -851,7 +849,9 @@ const Skills = {
 
       // 1. Check Miss
       if (attacker.effects) {
-        const blindEffect = attacker.effects.find((e) => e.stat === "missChance");
+        const blindEffect = attacker.effects.find(
+          (e) => e.stat === "missChance"
+        );
         if (blindEffect && Math.random() * 100 < blindEffect.amount) {
           return { damage: 0, log: `**${attacker.name}** misses the attack!` };
         }
@@ -862,14 +862,22 @@ const Skills = {
         if (dodgeEffect && Math.random() * 100 < dodgeEffect.amount) {
           const counterDmg = dodgeEffect.extra || 10;
           addBuff(defender, "Counter Stance", "dmgBoost", counterDmg, 1);
-          return { damage: 0, log: `**${defender.name}** dodged **${attacker.name}**'s attack!` };
+          return {
+            damage: 0,
+            log: `**${defender.name}** dodged **${attacker.name}**'s attack!`,
+          };
         }
       }
-      
+
       const critChance = attacker.stats.critRate || 5;
       const isCrit = Math.random() * 100 < critChance;
       const rawDamage = attacker.stats.atk;
-      const { damage, suffix } = calculateDamage(attacker, defender, rawDamage, isCrit);
+      const { damage, suffix } = calculateDamage(
+        attacker,
+        defender,
+        rawDamage,
+        isCrit
+      );
       defender.stats.hp -= damage;
 
       let logPrefix = `**${attacker.name}** attacks!`;
@@ -878,34 +886,50 @@ const Skills = {
 
       // Wisadel Cleanup (If out of ammo)
       if (attacker.name === "Wisadel") {
-         const ammoBuff = attacker.effects.find(e => e.name === "Explosive Ammo");
-         if (ammoBuff && ammoBuff.amount <= 0) {
-             // Clean up effects
-             attacker.effects = attacker.effects.filter(e => e.name !== "Explosive Ammo");
-             const statBuffs = attacker.effects.filter(e => e.name === "Wisadel Buff");
-             statBuffs.forEach(b => {
-                 if (attacker.stats[b.stat] !== undefined) attacker.stats[b.stat] -= b.amount;
-             });
-             attacker.effects = attacker.effects.filter(e => e.name !== "Wisadel Buff");
-             log += `\n\n⚠️ **Wisadel** ran out of Ammo! Buffs ended.`;
-         }
+        const ammoBuff = attacker.effects.find(
+          (e) => e.name === "Explosive Ammo"
+        );
+        if (ammoBuff && ammoBuff.amount <= 0) {
+          // Clean up effects
+          attacker.effects = attacker.effects.filter(
+            (e) => e.name !== "Explosive Ammo"
+          );
+          const statBuffs = attacker.effects.filter(
+            (e) => e.name === "Wisadel Buff"
+          );
+          statBuffs.forEach((b) => {
+            if (attacker.stats[b.stat] !== undefined)
+              attacker.stats[b.stat] -= b.amount;
+          });
+          attacker.effects = attacker.effects.filter(
+            (e) => e.name !== "Wisadel Buff"
+          );
+          log += `\n\n⚠️ **Wisadel** ran out of Ammo! Buffs ended.`;
+        }
       }
 
       log += handleDamageStorage(defender, damage);
-      log += handleDeathPrevention(defender); 
+      log += handleDeathPrevention(defender);
 
       // Passive: Lifesteal
       if (attacker.effects) {
-        const lifestealBuff = attacker.effects.find((e) => e.stat === "lifesteal");
+        const lifestealBuff = attacker.effects.find(
+          (e) => e.stat === "lifesteal"
+        );
         if (lifestealBuff) {
           const healAmount = Math.floor(damage * (lifestealBuff.amount / 100));
           if (healAmount > 0) {
-            attacker.stats.hp = Math.min(attacker.maxHp, attacker.stats.hp + healAmount);
+            attacker.stats.hp = Math.min(
+              attacker.maxHp,
+              attacker.stats.hp + healAmount
+            );
             log += `\nHealed **${healAmount}** HP via Lifesteal!`;
           }
         }
         // Passive: Acheron Stacks (Triggered ON Attack)
-        const acheronBuff = attacker.effects.find((e) => e.name === "Slashed Dream");
+        const acheronBuff = attacker.effects.find(
+          (e) => e.name === "Slashed Dream"
+        );
         if (acheronBuff) {
           acheronBuff.amount += 1;
           log += `\n**Crimson Verdict** is at **${acheronBuff.amount}** stacks.`;
@@ -917,9 +941,9 @@ const Skills = {
             defender.stats.hp -= nukeCalc.damage;
             acheronBuff.amount = 0;
             log += ` **Slashed Dream Consumed!**\n**${attacker.name}** unleashed **Crimson Slash**! Dealt **${nukeCalc.damage}** DMG! **CRITICAL HIT!!**${nukeCalc.suffix}`;
-            
+
             log += handleDamageStorage(defender, nukeCalc.damage);
-            log += handleDeathPrevention(defender); 
+            log += handleDeathPrevention(defender);
           }
         }
       }

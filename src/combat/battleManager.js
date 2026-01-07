@@ -116,7 +116,7 @@ function formatDrops(report) {
       .map(([name, count]) => `x${count} **${name}**`)
       .join("\n");
   }
-  fields.push({ name: "🎴 Cards Received", value: cardValue, inline: false });
+  fields.push({ name: "🎴 Cards Received", value: cardValue, inline: true });
 
   let itemValue = "None";
   if (report.itemDrops.length > 0) {
@@ -128,10 +128,9 @@ function formatDrops(report) {
       .map(([name, count]) => `x${count} **${name}**`)
       .join("\n");
   }
-  fields.push({ name: "🎒 Items Received", value: itemValue, inline: false });
+  fields.push({ name: "🎒 Items Received", value: itemValue, inline: true });
   return fields;
 }
-
 
 // =========================================
 // ⏩ SKIP BATTLE
@@ -178,20 +177,20 @@ async function skipBattle(message, inputTimes = 1) {
     // 1. Handle "all" input
     if (typeof inputTimes === "string" && inputTimes.toLowerCase() === "all") {
       const maxPossible = Math.floor(user.stam / STAMINA_COST);
-      
+
       if (maxPossible <= 0) {
-         return message.reply(
+        return message.reply(
           `⚠️ Not enough Stamina for even 1 battle! (Need ${STAMINA_COST} ⚡)`
         );
       }
       // No limit cap here anymore, it uses all available stamina
       requestedRuns = maxPossible;
-    } 
+    }
     // 2. Handle specific number input
     else {
       requestedRuns = parseInt(inputTimes);
       if (isNaN(requestedRuns) || requestedRuns < 1) requestedRuns = 1;
-      
+
       // No MAX_BATCH_LIMIT check here anymore
 
       const totalStamCost = requestedRuns * STAMINA_COST;
@@ -208,7 +207,12 @@ async function skipBattle(message, inputTimes = 1) {
     user.stam -= requestedRuns * STAMINA_COST;
 
     // ✅ QUEST UPDATE (SKIP)
-    await updateQuestProgress(user, "SPEND_STAMINA", requestedRuns * STAMINA_COST, message);
+    await updateQuestProgress(
+      user,
+      "SPEND_STAMINA",
+      requestedRuns * STAMINA_COST,
+      message
+    );
     await updateQuestProgress(user, "BATTLE_COMPLETE", requestedRuns, message);
 
     const report = await processBattleRewards(
@@ -222,12 +226,15 @@ async function skipBattle(message, inputTimes = 1) {
     const embed = new EmbedBuilder()
       .setTitle(`⏩ Skipped ${requestedRuns} Battles`)
       .setColor("#0099ff")
-      .setAuthor({ name: `${message.author.username}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
+      .setAuthor({
+        name: `${message.author.username}`,
+        iconURL: message.author.displayAvatarURL({ dynamic: true }),
+      })
       .setDescription(`Farmed **Stage ${areaId}-${stageId}**`)
       .addFields(
         {
           name: "💰 Rewards",
-          value: `🪙 +${report.gold}\n${xpIcon} +${report.cardXp} (Card)\n🆙 +${report.accountXp} (User)`,
+          value: `🪙 +${report.gold}\n${xpIcon} +${report.cardXp} (Card)\n${xpIcon} +${report.accountXp} (User)`,
           inline: true,
         },
         {
@@ -238,15 +245,18 @@ async function skipBattle(message, inputTimes = 1) {
           inline: true,
         }
       );
-
     if (report.levelsGained > 0) {
       embed.addFields({
         name: "📈 Card Growth",
         value: `**${user.selectedCard.masterData.name}**\nLv. ${initialLevel} ➔ **Lv. ${user.selectedCard.level}**\nStats increased!`,
-        inline: false,
+        inline: true,
       });
-    } 
-
+    }
+ embed.addFields({
+      name: "\u200B",
+      value: "\u200B",
+      inline: false,
+    });
     const dropFields = formatDrops(report);
     embed.addFields(dropFields);
 
@@ -789,8 +799,7 @@ async function startBattle(message) {
     } else {
       user.stam -= 2;
       await user.save();
-      let lossReason =
-        turn > MAX_TURNS ? "Time Limit Exceeded" : "Knocked Out";
+      let lossReason = turn > MAX_TURNS ? "Time Limit Exceeded" : "Knocked Out";
       await message.reply(
         `💀 **Defeat (${lossReason})...**\n${player.name} fell in battle. You lost 2 Stamina.`
       );

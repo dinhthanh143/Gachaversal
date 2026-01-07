@@ -1,10 +1,12 @@
-const { mobs } = require("../characters/mob");
+const characters = require("../characters/characters");
+
+// Convert the exported object into an array for easy searching
+const characterList = Object.values(characters);
 
 // ==========================================
-// 📊 XP SCALING LOGIC (Player Grind)
+// 📊 XP SCALING LOGIC
 // ==========================================
 
-// 1. THE CURVE (XP Needed to Level Up)
 const getCardLevelCap = (level) => {
   if (level <= 50) {
     return Math.floor(50 * Math.pow(level, 2));
@@ -13,7 +15,6 @@ const getCardLevelCap = (level) => {
   }
 };
 
-// 2. THE PACING (Runs to Level Up)
 const getRunsPerLevel = (level) => {
   if (level < 20) return 5.0;      
   if (level < 40) return 10.0;     
@@ -23,7 +24,6 @@ const getRunsPerLevel = (level) => {
   return 30.0;
 };
 
-// 3. DROP CALCULATION
 const getFixedCardXp = (difficultyLevel) => {
   const xpCap = getCardLevelCap(difficultyLevel);
   const ratio = getRunsPerLevel(difficultyLevel);
@@ -33,74 +33,117 @@ const getFixedCardXp = (difficultyLevel) => {
 // ==========================================
 // ⚙️ MOB GENERATION & SCALING
 // ==========================================
-const SCALING = {
-  // 📈 GROWTH RATE (Compound Interest)
-  // 0.03 = 3% increase per level.
-  // Lv 1 = 1x stats
-  // Lv 50 = ~4.3x stats
-  // Lv 200 = ~360x stats (This fixes the weak high-level mobs)
-  GROWTH_RATE: 0.03,
 
-  FACTORS: {
-    HP: 4.0,      // Mobs get 8x Base HP (Makes them tanky)
-    ATK: 1.0,     // Mobs get 1x Base ATK
-    DEF: 0.8,     // Mobs get 0.8x Base DEF (So players can actually hurt them)
-    SPEED: 0.06,  // Linear Speed Scaling per level (2% per level, NOT exponential)
+const SCALING = {
+  // 📈 PLAYER GROWTH RATES
+  GROWTH_RATES: {
+    HP: 1.02,     // +2.0% per level
+    ATK: 1.015,   // +1.5% per level
+    DEF: 1.013,   // +1.3% per level
+    SPEED: 1.01   // +1.0% per level
   },
 
-  // ✨ RARITY MULTIPLIERS
+  // Rarity 1-6 Config
   RARITY: {
-    1: { name: "Common", statMult: 1.0, xpMult: 1.0, dropMult: 1.0 },
-    2: { name: "Rare",   statMult: 1.3, xpMult: 1.5, dropMult: 1.2 },
-    3: { name: "Elite",  statMult: 1.8, xpMult: 2.5, dropMult: 1.5 },
-    4: { name: "Boss",   statMult: 3.5, xpMult: 5.0, dropMult: 2.0 }, // Buffed Boss statMult
+    1: { name: "Common", xpMult: 1.0, dropMult: 1.0 },
+    2: { name: "Rare",   xpMult: 1.5, dropMult: 1.2 },
+    3: { name: "Elite",  xpMult: 2.5, dropMult: 1.5 },
+    4: { name: "Boss",   xpMult: 5.0, dropMult: 2.0 },
+    5: { name: "Mythic", xpMult: 8.0, dropMult: 2.5 },
+    6: { name: "God",    xpMult: 12.0, dropMult: 3.0 },
   },
 };
 
+function getThreatIcons(rarity) {
+  const r = Math.max(1, Math.min(6, rarity));
+  return "💀".repeat(r);
+}
+
+function calculateStats(baseStats, rarity) {
+  if (!baseStats) baseStats = { hp: 75, atk: 60, def: 50, speed: 69 };
+  return {
+    hp: Math.floor(baseStats.hp * (3 + rarity) + rarity * 20 + Math.floor(Math.random() * 20)),
+    atk: Math.floor(baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10)),
+    def: Math.floor(baseStats.def + 20 * rarity + Math.floor(Math.random() * 10)),
+    speed: Math.floor(baseStats.speed + 7 * rarity + Math.floor(Math.random() * 5)),
+  };
+}
+
 /**
- * Creates a modified instance of a mob.
+ * Creates a modified instance of a mob (based on Character Data).
  */
-function moddedMob(mobId, targetLevel, rarity = 1) {
-  const template = mobs.find((m) => m.enemyId === mobId);
-  if (!template) return { name: "MissingNo", level: 1, stats: { hp: 10, atk: 1 }, rewards: { gold: 0 } };
+function moddedMob(charId, targetLevel, rarity = 1) {
+  // 1. Find the Character Template
+  const template = characterList.find((c) => c.pokeId == charId);
+  
+  if (!template) {
+    return { 
+      name: "MissingNo", 
+      level: targetLevel, 
+      rarity: rarity,
+      stats: { hp: 100, atk: 10, def: 10, speed: 10 }, 
+      rewards: { gold: 0, xp: 0, drops: [] },
+      skill: { name: "Bug", description: "Does nothing", values: [] },
+    };
+  }
 
   const mob = JSON.parse(JSON.stringify(template));
-  const rConfig = SCALING.RARITY[rarity] || SCALING.RARITY[1];
   
-  const growthFactor = Math.pow(1 + SCALING.GROWTH_RATE, targetLevel - 1);
-  
-  // 1. Stats Scaling
-  mob.stats.hp = Math.floor(template.stats.hp * growthFactor * rConfig.statMult * SCALING.FACTORS.HP);
-  mob.stats.atk = Math.floor(template.stats.atk * growthFactor * rConfig.statMult * SCALING.FACTORS.ATK);
-  mob.stats.def = Math.floor(template.stats.def * growthFactor * rConfig.statMult * SCALING.FACTORS.DEF);
-
-  const speedMult = 1 + ((targetLevel - 1) * SCALING.FACTORS.SPEED);
-  mob.stats.speed = Math.floor(template.stats.speed * speedMult * rConfig.statMult);
-
+  // 2. Set Basic Info
   mob.level = targetLevel;
   mob.rarity = rarity;
-  if (rarity > 1) mob.name = `${rConfig.name} ${mob.name}`;
+  mob.enemyId = template.pokeId.toString();
   
-  // 2. Skill Scaling (+0.2 per Threat Rarity)
-  if (template.skill && template.skill.values) {
-    // Base Value * Growth * (1 + (Rarity * 0.2))
-    // e.g. Rarity 1 = 1.2x, Rarity 4 (Boss) = 1.8x
-    const rarityBonus = 0 + (rarity * 0.2);
-    
-    mob.skill.values = parseFloat((template.skill.values * growthFactor * rarityBonus).toFixed(2));
+  const skulls = getThreatIcons(rarity);
+  mob.name = `${skulls} ${mob.name}`;
+
+  // 3. Calculate Stats
+  const baseRarityStats = calculateStats(template.stats, rarity);
+  const levelsToGrow = Math.max(0, targetLevel - 1);
+
+  mob.stats = {
+    hp: Math.floor(baseRarityStats.hp * Math.pow(SCALING.GROWTH_RATES.HP, levelsToGrow)),
+    atk: Math.floor(baseRarityStats.atk * Math.pow(SCALING.GROWTH_RATES.ATK, levelsToGrow)),
+    def: Math.floor(baseRarityStats.def * Math.pow(SCALING.GROWTH_RATES.DEF, levelsToGrow)),
+    speed: Math.floor(baseRarityStats.speed * Math.pow(SCALING.GROWTH_RATES.SPEED, levelsToGrow))
+  };
+
+  // 4. Resolve Skill Values & Description
+  if (mob.skill && mob.skill.values) {
+    const rarityIndex = Math.max(0, rarity - 1);
+    const avgGrowth = (SCALING.GROWTH_RATES.ATK + SCALING.GROWTH_RATES.HP) / 2;
+    const skillLevelMult = Math.pow(avgGrowth, levelsToGrow);
+    const resolvedValues = [];
+
+    if (Array.isArray(mob.skill.values) && Array.isArray(mob.skill.values[0])) {
+      mob.skill.values.forEach((valArray, i) => {
+        let baseVal = valArray[rarityIndex] !== undefined ? valArray[rarityIndex] : valArray[valArray.length - 1];
+        let finalVal = baseVal;
+        if (baseVal > 1) finalVal = parseFloat((baseVal * skillLevelMult).toFixed(2));
+        resolvedValues.push(finalVal);
+        const regex = new RegExp(`\\{${i}\\}`, "g");
+        mob.skill.description = mob.skill.description.replace(regex, finalVal);
+      });
+      mob.skill.values = resolvedValues;
+    } else {
+      const baseVal = Array.isArray(mob.skill.values) ? mob.skill.values[0] : mob.skill.values;
+      const finalVal = parseFloat((baseVal * skillLevelMult).toFixed(2));
+      mob.skill.values = [finalVal];
+      mob.skill.description = mob.skill.description.replace(/\{0\}/g, finalVal);
+    }
   }
 
-  // 3. Rewards Scaling
-  mob.rewards.gold = Math.floor(template.rewards.gold * growthFactor * rConfig.xpMult);
-  mob.rewards.xp = Math.floor(template.rewards.xp * growthFactor * rConfig.xpMult);
+  // 5. Rewards Scaling (ADDED BACK ✅)
+  const rConfig = SCALING.RARITY[rarity] || SCALING.RARITY[1];
+  const econGrowth = Math.pow(1.03, levelsToGrow); // 3% compound growth per level
+  const baseGold = 25; 
+  const baseXp = 15; 
 
-  // 4. Drops
-  if (mob.rewards.drops) {
-    mob.rewards.drops.forEach((drop) => {
-      drop.chance = parseFloat((drop.chance * rConfig.dropMult).toFixed(2));
-      if (drop.chance > 1.0) drop.chance = 1.0;
-    });
-  }
+  mob.rewards = {
+    gold: Math.floor(baseGold * econGrowth * rConfig.xpMult),
+    xp: Math.floor(baseXp * econGrowth * rConfig.xpMult), // Visual/Account XP
+    drops: [] 
+  };
 
   return mob;
 }
@@ -122,11 +165,11 @@ const DUNGEON_AREAS = {
   1: {
     name: "Shallow Floors ⚔️",
     stages: {
-      1: createStage(2, moddedMob("1", 70, 1)), 
-      2: createStage(3, moddedMob("1", 3, 1)), 
-      3: createStage(4, moddedMob("2", 4, 1)), 
-      4: createStage(4, moddedMob("1", 4, 2)), 
-      5: createStage(5, moddedMob("3", 5, 2)), 
+      1: createStage(2, moddedMob(1, 10, 1)),   // Galbrena Lv.2 Common
+      2: createStage(3, moddedMob(2, 3, 1)),   // Carlotta Lv.3 Common
+      3: createStage(4, moddedMob(3, 4, 1)),   // Chisa Lv.4 Common
+      4: createStage(4, moddedMob(1, 5, 2)),   // Galbrena Lv.5 Rare
+      5: createStage(5, moddedMob(4, 5, 2)),   // Rover Lv.5 Rare (Boss)
     }
   },
   
@@ -134,11 +177,11 @@ const DUNGEON_AREAS = {
   2: {
     name: "The Dark Hall ☠️",
     stages: {
-       1: createStage(2, moddedMob("1", 2, 1)),
-      2: createStage(3, moddedMob("1", 3, 1)), 
-      3: createStage(4, moddedMob("2", 4, 1)), 
-      4: createStage(4, moddedMob("1", 4, 2)), 
-      5: createStage(5, moddedMob("3", 5, 2)), 
+      1: createStage(2, moddedMob(5, 6, 1)),   // Ye Lv.6 Common
+      2: createStage(3, moddedMob(6, 7, 1)),   // QiuYuan Lv.7 Common
+      3: createStage(4, moddedMob(5, 8, 2)),   // Ye Lv.8 Rare
+      4: createStage(4, moddedMob(7, 9, 2)),   // Miyabi Lv.9 Rare
+      5: createStage(5, moddedMob(8, 10, 3)),  // Yixuan Lv.10 Elite
     }
   }
 };
@@ -147,5 +190,6 @@ module.exports = {
   moddedMob, 
   DUNGEON_AREAS, 
   getFixedCardXp, 
-  getCardLevelCap 
+  getCardLevelCap,
+  SCALING 
 };
