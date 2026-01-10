@@ -25,7 +25,7 @@ async function createAccount(message) {
 
     await Inventory.create({
       userId,
-      items: [{ itemId: "ticket", amount: 10 }],
+      items: [{ itemId: "ticket", amount: 30 }],
     });
 
     message.reply("Your profile has been created successfully!");

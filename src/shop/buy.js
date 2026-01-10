@@ -1,3 +1,4 @@
+const { goldIcon } = require("../commands/hourly_daily_weekly");
 const { UserContainer, Inventory } = require("../db");
 const items = require("../items/items");
 const { updateQuestProgress } = require("../quest/questManager"); 
@@ -41,7 +42,7 @@ async function buy(message) {
     const totalPrice = itemToBuy.price * amount;
     const currency = itemToBuy.currency; 
     const userBalance = user[currency]; 
-    const currencyIcon = currency === "gem" ? "💎" : "🪙";
+    const currencyIcon = currency === "gem" ? "💎" : goldIcon;
 
     // 2. Pre-check Balance
     if (userBalance < totalPrice) {

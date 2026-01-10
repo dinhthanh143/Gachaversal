@@ -1,8 +1,12 @@
 const { UserContainer, Cards } = require("../db");
 const { getRarityStars } = require("../functions");
 const { getAscIcon } = require("../commands/inv_cards");
-const { EmbedBuilder } = require("discord.js"); // ✅ Added EmbedBuilder
+const { EmbedBuilder } = require("discord.js");
+// ✅ Import the power calculator
+const { calculateTeamPower } = require("./raidManager"); 
+
 const borderLine = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
 async function team(message) {
   const userId = message.author.id;
 
@@ -30,10 +34,30 @@ async function team(message) {
     const cardMap = new Map();
     cards.forEach((c) => cardMap.set(c.uid, c));
 
-    // 4. Build the Embed
+    // ✅ 4. Calculate Total Stats for Power Level
+    const totalStats = { hp: 0, atk: 0, def: 0, speed: 0 };
+
+    // Loop through slots to find valid cards and sum stats
+    teamSlots.forEach(uid => {
+        if (uid !== null) {
+            const card = cardMap.get(uid);
+            if (card) {
+                totalStats.hp += card.stats.hp;
+                totalStats.atk += card.stats.atk;
+                totalStats.def += card.stats.def;
+                totalStats.speed += card.stats.speed;
+            }
+        }
+    });
+
+    const totalPower = calculateTeamPower(totalStats);
+
+    // 5. Build the Embed
     const embed = new EmbedBuilder()
       .setTitle(`🛡️ ${message.author.username}'s Team`)
-      .setColor("#0099ff") // Nice blue theme
+      // ✅ Display Power Level here
+      .setDescription(`💥 **Team Power:** ${totalPower.toLocaleString()}`) 
+      .setColor("#0099ff") 
       .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
       .setAuthor({
         name : `${message.author.username}`,
@@ -45,6 +69,7 @@ async function team(message) {
         value: borderLine,
         inline: false,
       });
+
     for (let i = 0; i < 4; i++) {
       const uid = teamSlots[i];
       const slotNum = i + 1;
@@ -62,11 +87,9 @@ async function team(message) {
           const name = card.masterData.name;
           const lv = `Lv.${card.level}`;
           const type = card.masterData.type;
-          const asc = `Asc.${getAscIcon(card.ascension)}`; // Usage from your code
+          const asc = `Asc.${getAscIcon(card.ascension)}`; 
 
           // Formatting the Value nicely
-          // Line 1: Name & Stars
-          // Line 2: Stats/Info
           const fieldVal =
             `**${name}** ${getRarityStars(card.rarity)}\n` +
             `🔸 [${lv}] [${type}] [${asc}]`;
@@ -82,7 +105,7 @@ async function team(message) {
             name: `Slot #${slotNum}`,
             value: `⚠️ [Unknown Card] (UID: ${uid})`,
             inline: false,
-          });
+            });
         }
       }
     }

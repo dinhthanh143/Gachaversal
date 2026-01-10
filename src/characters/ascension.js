@@ -1,14 +1,15 @@
-const { Cards, Index } = require("../db");
-const { 
-  EmbedBuilder, 
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle, 
-  ComponentType 
+const { Cards, Index, UserContainer } = require("../db"); // Added UserContainer
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ComponentType,
 } = require("discord.js");
 const { getRarityStars } = require("../functions");
 const { formatImage } = require("../commands/infoCard");
-// Level Caps Configuration (Same as your rewards system)
+
+// Level Caps Configuration
 const LEVEL_CAPS = {
   1: 40,
   2: 50,
@@ -18,8 +19,6 @@ const LEVEL_CAPS = {
   6: 100,
 };
 
-// Helper for stars
-
 async function ascension(message) {
   try {
     const userId = message.author.id;
@@ -27,30 +26,37 @@ async function ascension(message) {
 
     // 1. Input Validation
     if (args.length < 3) {
-      return message.reply("⚠️ Usage: `!ascension [Target Card Index] [Fodder Card Index]`\nExample: `!asc 1 5` (Ascend card #1 using card #5)");
+      return message.reply(
+        "⚠️ Usage: `!ascension [Target Card Index] [Fodder Card Index]`\nExample: `!asc 1 5` (Ascend card #1 using card #5)"
+      );
     }
 
     const targetIndex = parseInt(args[1]) - 1;
     const fodderIndex = parseInt(args[2]) - 1;
 
     if (isNaN(targetIndex) || isNaN(fodderIndex)) {
-      return message.reply("⚠️ Please provide valid numeric numbers for your inventory.");
+      return message.reply(
+        "⚠️ Please provide valid numeric numbers for your inventory."
+      );
     }
 
-    // 2. Fetch User Inventory
-    // We need to fetch all cards to map the "Index" correctly (assuming standard sorting)
-    const userCards = await Cards.find({ ownerId: userId });
+    // 2. Fetch User Data (Inventory & Profile)
+    // Added .sort({ _id: 1 }) to ensure indices match your inventory display
+    const userCards = await Cards.find({ ownerId: userId }).sort({ _id: 1 });
+    const userProfile = await UserContainer.findOne({ userId }); // Fetch Profile for Team check
 
     if (!userCards[targetIndex] || !userCards[fodderIndex]) {
-      return message.reply("❌ One of the cards specified does not exist in your inventory.");
+      return message.reply(
+        "❌ One of the cards specified does not exist in your inventory."
+      );
     }
 
     const targetCard = userCards[targetIndex];
     const fodderCard = userCards[fodderIndex];
 
-    // Populate Master Data for Names/Images
+    // Populate Master Data
     const targetMaster = await Index.findOne({ pokeId: targetCard.cardId });
-    const fodderMaster = await Index.findOne({ pokeId: fodderCard.cardId }); // Should be same, but fetching to be safe
+    const fodderMaster = await Index.findOne({ pokeId: fodderCard.cardId });
 
     if (!targetMaster || !fodderMaster) {
       return message.reply("❌ Error loading card data. Contact admin.");
@@ -65,27 +71,64 @@ async function ascension(message) {
 
     // B. Check Max Ascension
     if (targetCard.ascension >= 6) {
-      return message.reply("⚠️ This card has already reached **Max Ascension (Rank 6)**!");
+      return message.reply(
+        "⚠️ This card has already reached **Max Ascension (Rank 6)**!"
+      );
     }
 
-    // C. Check Level Cap (Target must be max level for current rarity)
+    // C. Check Level Cap
     const currentLevelCap = LEVEL_CAPS[targetCard.rarity] || 100;
     if (targetCard.level < currentLevelCap) {
       return message.reply(
-        `🛑 **Lv. ${targetCard.level} ${targetMaster.name} ${getRarityStars(targetCard.rarity)}** has not reached their full potential.\n` +
-        `Required Level: **${currentLevelCap}**`
+        `🛑 **Lv. ${targetCard.level} ${targetMaster.name} ${getRarityStars(
+          targetCard.rarity
+        )}** has not reached their full potential.\n` +
+          `Required Level: **${currentLevelCap}**`
       );
     }
 
     // D. Check Matching Character
     if (targetCard.cardId !== fodderCard.cardId) {
-      return message.reply(`❌ You must sacrifice a copy of **${targetMaster.name}** with the same rarity to ascend this card.`);
+      return message.reply(
+        `❌ You must sacrifice a copy of **${targetMaster.name}** with the same rarity to ascend this card.`
+      );
     }
 
     // E. Check Matching Rarity
     if (targetCard.rarity !== fodderCard.rarity) {
-      return message.reply(`❌ The material card must be the same rarity (**${getRarityStars(targetCard.rarity)}**).`);
+      return message.reply(
+        `❌ The material card must be the same rarity (**${getRarityStars(
+          targetCard.rarity
+        )}**).`
+      );
     }
+
+    // F. TEAM CHECK (NEW) - Check if fodder card is in team
+    if (
+      userProfile &&
+      userProfile.team &&
+      userProfile.team.includes(fodderCard.uid)
+    ) {
+      return message.reply(
+        `🛑 The material card **#${fodderIndex + 1} (${
+          fodderMaster.name
+        })** is currently in your **Team**.\n` +
+          `Please remove it from your team before sacrificing it.`
+      );
+    }
+
+    // (Optional) Check if Fodder is marked as Favorite
+    if (fodderCard.fav) {
+      return message.reply(
+        `🛑 The material card **#${
+          fodderIndex + 1
+        }** is locked (❤️). Unfavorite it first.`
+      );
+    }
+    const newAtk = Math.floor(targetCard.stats.atk * 1.07);
+    const newHp = Math.floor(targetCard.stats.hp * 1.09);
+    const newDef = Math.floor(targetCard.stats.def * 1.06);
+    const newSpd = Math.floor(targetCard.stats.speed * 1.025);
 
     // 4. CONFIRMATION EMBED
     const confirmEmbed = new EmbedBuilder()
@@ -93,38 +136,64 @@ async function ascension(message) {
       .setTitle("🔥 Ascension Ritual")
       .setDescription(
         `Are you sure you want to **consume**:\n` +
-        `❌ **Lv. ${fodderCard.level} ${fodderMaster.name}** ${getRarityStars(fodderCard.rarity)} (Index: ${fodderIndex + 1})\n\n` +
-        `To **Ascend**:\n` +
-        `✨ **Lv. ${targetCard.level} ${targetMaster.name}** ${getRarityStars(targetCard.rarity)} (Index: ${targetIndex + 1})\n` +
-        `**Rank:** ${targetCard.ascension || 0} ➔ **${(targetCard.ascension || 0) + 1}**`
+          `❌ **Lv. ${fodderCard.level} ${fodderMaster.name}** ${getRarityStars(
+            fodderCard.rarity
+          )} (Index: ${fodderIndex + 1})\n\n` +
+          `To **Ascend**:\n` +
+          `✨ **Lv. ${targetCard.level} ${targetMaster.name}** ${getRarityStars(
+            targetCard.rarity
+          )} (Index: ${targetIndex + 1})\n` +
+          `**Ascension Rank:** ${targetCard.ascension || 0} ➔ **${
+            (targetCard.ascension || 0) + 1
+          }**`
       )
-      .addFields(
-        { name: "Projected Stats", value: `
-        ⚔️ ATK: +6.75%
-        🩸 HP: +10%
-        🛡️ DEF: +6%
-        💨 SPD: +2.5%
-        `, inline: false }
-      )
-      .setThumbnail(formatImage(targetMaster.image,110,140));
+      .addFields({
+        name: "Projected Stats",
+        value: `
+        ⚔️ ATK: ${targetCard.stats.atk} ➔ ${newAtk} (+7%)
+        🩸 HP: ${targetCard.stats.hp} ➔ ${newHp} (+9%)
+        🛡️ DEF: ${targetCard.stats.def} ➔ ${newDef} (+6%)
+        💨 SPD: ${targetCard.stats.speed} ➔ ${newSpd} (+2.5%)
+        `,
+        inline: false,
+      })
+      .setThumbnail(formatImage(targetMaster.image, 110, 140));
 
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("confirm_asc").setLabel("Confirm Ascension").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId("cancel_asc").setLabel("Cancel").setStyle(ButtonStyle.Danger)
+      new ButtonBuilder()
+        .setCustomId("confirm_asc")
+        .setLabel("Confirm Ascension")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId("cancel_asc")
+        .setLabel("Cancel")
+        .setStyle(ButtonStyle.Danger)
     );
 
-    const replyMsg = await message.reply({ embeds: [confirmEmbed], components: [row] });
+    const replyMsg = await message.reply({
+      embeds: [confirmEmbed],
+      components: [row],
+    });
 
     // 5. COLLECTOR
     const filter = (i) => i.user.id === userId;
-    const collector = replyMsg.createMessageComponentCollector({ filter, time: 60000, max: 1, componentType: ComponentType.Button });
+    const collector = replyMsg.createMessageComponentCollector({
+      filter,
+      time: 60000,
+      max: 1,
+      componentType: ComponentType.Button,
+    });
 
     collector.on("collect", async (interaction) => {
       try {
         await interaction.deferUpdate();
 
         if (interaction.customId === "cancel_asc") {
-          await replyMsg.edit({ content: "❌ Ascension cancelled.", embeds: [], components: [] });
+          await replyMsg.edit({
+            content: "❌ Ascension cancelled.",
+            embeds: [],
+            components: [],
+          });
           return;
         }
 
@@ -132,24 +201,28 @@ async function ascension(message) {
           // Double check existence (in case deleted during wait)
           const exists = await Cards.exists({ _id: fodderCard._id });
           if (!exists) {
-            return replyMsg.edit({ content: "❌ The material card is no longer available.", embeds: [], components: [] });
+            return replyMsg.edit({
+              content: "❌ The material card is no longer available.",
+              embeds: [],
+              components: [],
+            });
           }
 
           // --- EXECUTE ASCENSION ---
-          
+
           // 1. Delete Fodder
           await Cards.deleteOne({ _id: fodderCard._id });
 
           // 2. Update Target Stats
           targetCard.ascension = (targetCard.ascension || 0) + 1;
-          
+
           const oldStats = { ...targetCard.stats };
 
           // Apply Multipliers
-          targetCard.stats.atk = Math.floor(targetCard.stats.atk * 1.0675);
-          targetCard.stats.hp = Math.floor(targetCard.stats.hp * 1.10);
-          targetCard.stats.def = Math.floor(targetCard.stats.def * 1.06);
-          targetCard.stats.speed = Math.floor(targetCard.stats.speed * 1.025);
+          targetCard.stats.atk = newAtk
+          targetCard.stats.hp = newHp
+          targetCard.stats.def = newDef
+          targetCard.stats.speed = newSpd
 
           await targetCard.save();
 
@@ -157,8 +230,10 @@ async function ascension(message) {
           const successEmbed = new EmbedBuilder()
             .setColor("#FFD700")
             .setTitle(`🎉 Ascension Successful!`)
-            .setDescription(`**${targetMaster.name}** has transcended to **Ascension Rank ${targetCard.ascension}**!`)
-            .setThumbnail(formatImage(targetMaster.image,110,140))
+            .setDescription(
+              `**${targetMaster.name}** has transcended to **Ascension Rank ${targetCard.ascension}**!`
+            )
+            .setThumbnail(formatImage(targetMaster.image, 110, 140))
             .addFields({
               name: "Stat Improvements",
               value: `
@@ -167,23 +242,36 @@ async function ascension(message) {
               🛡️ DEF: ${oldStats.def} ➔ **${targetCard.stats.def}**
               💨 SPD: ${oldStats.speed} ➔ **${targetCard.stats.speed}**
               `,
-              inline: false
+              inline: false,
             });
 
-          await replyMsg.edit({ content: null, embeds: [successEmbed], components: [] });
+          await replyMsg.edit({
+            content: null,
+            embeds: [successEmbed],
+            components: [],
+          });
         }
       } catch (err) {
         console.error("Ascension Error:", err);
-        replyMsg.edit({ content: "❌ An error occurred during the ritual.", embeds: [], components: [] });
+        replyMsg.edit({
+          content: "❌ An error occurred during the ritual.",
+          embeds: [],
+          components: [],
+        });
       }
     });
 
     collector.on("end", (collected, reason) => {
       if (reason === "time") {
-        replyMsg.edit({ content: "⌛ Ascension request timed out.", embeds: [], components: [] }).catch(() => {});
+        replyMsg
+          .edit({
+            content: "⌛ Ascension request timed out.",
+            embeds: [],
+            components: [],
+          })
+          .catch(() => {});
       }
     });
-
   } catch (error) {
     console.error("Ascension Command Error:", error);
     message.reply("An error occurred processing the command.");

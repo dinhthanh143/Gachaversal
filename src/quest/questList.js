@@ -16,9 +16,9 @@ const QUESTS = {
   daily_stamina_100: {
     id: "daily_stamina_100",
     name: "Burning Energy",
-    description: "Spend a total of 100 Stamina.",
+    description: "Spend a total of 180 Stamina.",
     type: "SPEND_STAMINA", 
-    target: 100,
+    target: 180,
     rewards: {
       gold: 2500,
       gem: 2,

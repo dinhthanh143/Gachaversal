@@ -2,7 +2,7 @@ const characters = require("../characters/characters");
 
 // Convert the exported object into an array for easy searching
 const characterList = Object.values(characters);
-
+const  {calculateStats} = require('../Banners/pullSystem')
 // ==========================================
 // 📊 XP SCALING LOGIC
 // ==========================================
@@ -37,7 +37,7 @@ const getFixedCardXp = (difficultyLevel) => {
 const SCALING = {
   // 📈 PLAYER GROWTH RATES
   GROWTH_RATES: {
-    HP: 1.02,     // +2.0% per level
+    HP: 1.015,     // +2.0% per level
     ATK: 1.015,   // +1.5% per level
     DEF: 1.013,   // +1.3% per level
     SPEED: 1.01   // +1.0% per level
@@ -59,15 +59,6 @@ function getThreatIcons(rarity) {
   return "💀".repeat(r);
 }
 
-function calculateStats(baseStats, rarity) {
-  if (!baseStats) baseStats = { hp: 75, atk: 60, def: 50, speed: 69 };
-  return {
-    hp: Math.floor(baseStats.hp * (3 + rarity) + rarity * 20 + Math.floor(Math.random() * 20)),
-    atk: Math.floor(baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10)),
-    def: Math.floor(baseStats.def + 20 * rarity + Math.floor(Math.random() * 10)),
-    speed: Math.floor(baseStats.speed + 7 * rarity + Math.floor(Math.random() * 5)),
-  };
-}
 
 /**
  * Creates a modified instance of a mob (based on Character Data).
@@ -95,7 +86,7 @@ function moddedMob(charId, targetLevel, rarity = 1) {
   mob.enemyId = template.pokeId.toString();
   
   const skulls = getThreatIcons(rarity);
-  mob.name = `${skulls} ${mob.name}`;
+  mob.name = mob.name;
 
   // 3. Calculate Stats
   const baseRarityStats = calculateStats(template.stats, rarity);
@@ -165,11 +156,11 @@ const DUNGEON_AREAS = {
   1: {
     name: "Shallow Floors ⚔️",
     stages: {
-      1: createStage(2, moddedMob(1, 10, 1)),   // Galbrena Lv.2 Common
-      2: createStage(3, moddedMob(2, 3, 1)),   // Carlotta Lv.3 Common
-      3: createStage(4, moddedMob(3, 4, 1)),   // Chisa Lv.4 Common
-      4: createStage(4, moddedMob(1, 5, 2)),   // Galbrena Lv.5 Rare
-      5: createStage(5, moddedMob(4, 5, 2)),   // Rover Lv.5 Rare (Boss)
+      1: createStage(2, moddedMob(1, 7, 1)),   // Galbrena Lv.2 Common
+      2: createStage(3, moddedMob(2, 7, 1)),   // Carlotta Lv.3 Common
+      3: createStage(4, moddedMob(3, 7, 1)),   // Chisa Lv.4 Common
+      4: createStage(4, moddedMob(1, 7, 2)),   // Galbrena Lv.5 Rare
+      5: createStage(5, moddedMob(4, 7, 2)),   // Rover Lv.5 Rare (Boss)
     }
   },
   

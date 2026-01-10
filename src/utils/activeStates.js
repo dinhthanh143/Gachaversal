@@ -1,6 +1,8 @@
 const battlingUsers = new Set();
 const pullingUsers = new Set();
 const tradingUsers = new Set();
+
+
 module.exports = {
   isUserBattling: (userId) => battlingUsers.has(userId),
   setUserBattling: (userId) => battlingUsers.add(userId),
@@ -13,4 +15,5 @@ module.exports = {
   isUserTrading: (userId) => tradingUsers.has(userId),
   setUserTrading: (userId) => tradingUsers.add(userId),
   removeUserTrading: (userId) => tradingUsers.delete(userId),
+
 };

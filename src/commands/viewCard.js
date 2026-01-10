@@ -3,6 +3,14 @@ const { getRarityStars } = require("../functions");
 const { EmbedBuilder } = require("discord.js");
 const { formatImage } = require("./infoCard");
 const { getAscIcon } = require("./inv_cards");
+const RARITY_LEVEL_CAPS = {
+  1: 40,
+  2: 50,
+  3: 60,
+  4: 80,
+  5: 90,
+  6: 100,
+};
 
 async function view(message) {
   try {
@@ -85,7 +93,7 @@ async function view(message) {
     }
 
     const scaledImg = await formatImage(master.image, 330, 550);
-
+    const xpDisplay = card.level >= RARITY_LEVEL_CAPS[card.rarity] ? "Maxed": `${card.xp} / ${xpCap}`
     const embed = new EmbedBuilder()
       .setColor(master.cardColor || "#ffffff")
       .setAuthor({
@@ -107,7 +115,7 @@ async function view(message) {
         },
         {
           name: "Stats",
-          value: `⚔️ **ATK:** ${card.stats.atk}\n🩸 **HP:** ${card.stats.hp}\n💨 **SPD:** ${card.stats.speed}\n🛡️ **DEF:** ${card.stats.def}\n✨ **XP:** ${card.xp} / ${xpCap}`,
+          value: `⚔️ **ATK:** ${card.stats.atk}\n🩸 **HP:** ${card.stats.hp}\n💨 **SPD:** ${card.stats.speed}\n🛡️ **DEF:** ${card.stats.def}\n✨ **XP:** ${xpDisplay}`,
           inline: false,
         },
         {
@@ -126,4 +134,4 @@ async function view(message) {
   }
 }
 
-module.exports = { view };
+module.exports = { view, RARITY_LEVEL_CAPS };

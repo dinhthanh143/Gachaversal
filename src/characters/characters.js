@@ -94,7 +94,7 @@ const ye = {
     icon: "<:ye_skill:1446822377101983787>",
     name: "Sword Of The Divine [PASSIVE]",
     description:
-      "When attacking, if Speed is lower than the target’s, gains {0}% lifesteal and +{1}% ATK ; otherwise, gains +{1}% ATK \nand +{2}% Crit Rate.",
+      "Upon entering battle, if Speed is lower than the target’s, gains {0}% lifesteal and +{1}% ATK ; otherwise, gains +{1}% ATK \nand +{2}% Crit Rate.",
     values: [
       [17, 22, 29, 36, 43, 50], // Lifesteal %
       [10, 14, 20, 25, 30, 35], // ATK %
@@ -140,7 +140,7 @@ const miyabi = {
     name: "Judgement Cut",
     description:
       "Marks the target with a silent slash. After 2 turns, the mark detonates, dealing {0} × ATK as **True Damage**.",
-    values: [[1.1, 1.2, 1.3, 1.5, 1.7, 1.9]],
+    values: [[1.1, 1.15, 1.2, 1.3, 1.4, 1.5]],
   },
   image:
     "https://res.cloudinary.com/pachi/image/upload/v1765013104/yabi_m4doiz.jpg",
@@ -307,8 +307,8 @@ const phainon = {
     icon: "<:phainon_skill:1456918929531474001>",
     name: "Echo of Calamity",
     description:
-      "For the next 3 turns, whenever Phainon takes damage, he stores {0}% of the damage received. When the duration ends, he retaliates against the target, dealing Light damage.",
-    values: [[45, 50, 55, 60, 65, 70]],
+      "For the next 3 turns, whenever Phainon takes damage, he stores {0}% of the damage received. When the duration ends, he retaliates against the target, dealing Light damage.Retaliation damage is increased by 30% if Phainon’s HP is below 50%",
+    values: [[55, 60, 65, 70, 75, 80]]
   },
   image:
     "https://res.cloudinary.com/pachi/image/upload/v1767422348/02b96ba754da2755c5691703772980de_udasvi.jpg",
@@ -439,14 +439,14 @@ const castorice = {
   stats: {
     atk: 70,
     hp: 95,
-    speed: 42,
+    speed: 41,
     def: 72,
   },
   skill: {
     icon: "<:castorice_skill:1457011310767243405>",
     name: "Queen of the Death Kingdom [PASSIVE]",
     description:
-      "When Castorice would be reduced to 0 HP, she instead remains in combat for 3 turns. During this time, she gains ATK equal to {0}% of her Max HP. After 3 turns, she dies. In Raids, she remains alive even after the effect ends while keeping the buff.",
+      "When Castorice would be reduced to 0 HP, she instead remains in combat for 3 turns. During this time, she gains ATK equal to {0}% of her Max HP. After 3 turns, she dies.",
     values: [[1, 2, 3, 4, 5, 6]],
   },
   image:
@@ -575,6 +575,27 @@ const mydei = {
   image: "https://res.cloudinary.com/pachi/image/upload/v1767609904/5dd5a00d3ba240e3bb754c341bf25e6d_hxtgvo.jpg",
   cardColor: "#dea426",
 };
+const mudrock = {
+  pokeId: 27,
+  name: "Mudrock",
+  franchise: "Arknights",
+  type: "Earth ⛰️",
+   stats: {
+    atk: 0,
+    hp: 0,
+    speed: 0,
+    def: 0,
+  },
+  skill: {
+    icon: "",
+    name: "",
+    description: "",
+    values: [
+    ],
+  },
+  image: "https://res.cloudinary.com/pachi/image/upload/v1768061176/mudrockjpg_ipvzzr.png",
+  cardColor: "#c20e44",
+};
 module.exports = {
   galbrena,
   carlotta,
@@ -600,5 +621,5 @@ module.exports = {
   amiya,
   wisadel,
   yuzuha,
-  skadi,mydei
+  skadi,mydei, mudrock
 };

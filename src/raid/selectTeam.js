@@ -16,13 +16,17 @@ async function teamset(message) {
     const user = await UserContainer.findOne({ userId });
     if (!user) return message.reply("❌ User not found.");
 
+    // ✅ CHECK: Block if user is in a Raid
+    if (user.inRaid) {
+        return message.reply("⚠️ You cannot modify your team while in a Raid! Please leave the raid first.");
+    }
+
     // Initialize team if missing
     if (!user.team || user.team.length === 0) {
       user.team = [null, null, null, null];
     }
 
     // 1. Verify Ownership
-    // Added populate('masterData') so we can show the name in the success message
     const card = await Cards.findOne({ ownerId: userId, uid: cardUid }).populate(
       "masterData"
     );
@@ -40,14 +44,12 @@ async function teamset(message) {
 
     // 3. Logic: Specific Slot vs Auto-Fill
     if (!isNaN(targetSlot)) {
-      // --- CASE A: User specified a slot (e.g. !teamset 100 2) ---
       if (targetSlot < 1 || targetSlot > 4) {
         return message.reply("⚠️ Slot number must be between **1 and 4**.");
       }
 
       const arrayIndex = targetSlot - 1;
 
-      // Check if that specific slot is available
       if (user.team[arrayIndex] !== null) {
         return message.reply(
           `🚫 **Slot ${targetSlot} is occupied!**\nPlease use \`!teamremove ${targetSlot}\` first.`
@@ -56,7 +58,6 @@ async function teamset(message) {
 
       finalSlotIndex = arrayIndex;
     } else {
-      // --- CASE B: No slot specified (Auto-find) ---
       finalSlotIndex = user.team.findIndex((slot) => slot === null);
 
       if (finalSlotIndex === -1) {
@@ -85,7 +86,6 @@ async function teamset(message) {
 }
 
 async function teamremove(message) {
-  // (No changes needed for teamremove based on your request, keeping it for context)
   const args = message.content.split(" ");
   const slotNum = parseInt(args[1]);
   const userId = message.author.id;
@@ -99,6 +99,11 @@ async function teamremove(message) {
   try {
     const user = await UserContainer.findOne({ userId });
     if (!user) return message.reply("❌ User not found.");
+
+    // ✅ CHECK: Block if user is in a Raid
+    if (user.inRaid) {
+        return message.reply("⚠️ You cannot modify your team while in a Raid! Please leave the raid first.");
+    }
 
     if (!user.team || user.team.length === 0) {
       user.team = [null, null, null, null];
@@ -124,4 +129,56 @@ async function teamremove(message) {
   }
 }
 
-module.exports = { teamset, teamremove };
+/**
+ * Resets the user's team.
+ * Can be called by a User Command (message object) OR Internally (userId string).
+ */
+async function teamReset(input) {
+  let userId;
+  let isCommand = false;
+
+  // Check if input is a Discord Message (has .author.id) or just a String (UserId)
+  if (input && input.author && input.author.id) {
+    userId = input.author.id;
+    isCommand = true; // User typed !resetteam
+  } else {
+    userId = input; // Internal call, input is the ID string
+    isCommand = false;
+  }
+
+  try {
+    const user = await UserContainer.findOne({ userId });
+    
+    // If internal and user not found, just return silently
+    if (!user) {
+      if (isCommand) return input.reply("❌ User not found.");
+      return; 
+    }
+
+    // ✅ CHECK: Block if user is in a Raid (Only if it's a command)
+    // We assume internal calls (isCommand = false) are system logic that might need to bypass this.
+    if (isCommand && user.inRaid) {
+        return input.reply("⚠️ You cannot modify your team while in a Raid! Please leave the raid first.");
+    }
+
+    // Reset the team array
+    user.team = [null, null, null, null];
+    
+    user.markModified("team");
+    await user.save();
+
+    // Only reply if it was triggered by a command
+    if (isCommand) {
+      return input.reply(
+        "✅ **Team Reset Successful!**\nAll team slots have been cleared."
+      );
+    }
+    
+    // If internal, logic ends here silently (no reply)
+  } catch (err) {
+    console.error(err);
+    if (isCommand) input.reply("❌ Error resetting team.");
+  }
+}
+
+module.exports = { teamset, teamremove, teamReset };

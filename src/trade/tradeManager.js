@@ -449,7 +449,7 @@ async function cancelTrade(message) {
   const trade = await getActiveTrade(userId);
   if (!trade) return message.reply("⚠️ You are not in an active trade.");
   message.reply(
-    `<@${trade.senderId} has cancelled their trade with <@${trade.receiverId}`
+    `<@${trade.senderId}> has cancelled their trade with <@${trade.receiverId}>`
   );
   await Trade.deleteOne({ _id: trade._id });
   removeUserTrading(trade.senderId);
@@ -543,10 +543,10 @@ async function addCardToTrade(message) {
   // ---------------------------------------------------------
   if (args[1] && !args[1].startsWith("-") && !isNaN(parseInt(args[1]))) {
     const indexInput = parseInt(args[1]);
-    
+
     // Sort by _id to match your inventory display order
     const userCards = await Cards.find({ ownerId: userId }).sort({ _id: 1 });
-    
+
     const targetCard = userCards.find((c, i) => {
       const displayId = c.uid ? c.uid : i + 1;
       return displayId === indexInput;
@@ -554,7 +554,7 @@ async function addCardToTrade(message) {
 
     if (targetCard) cardsToAdd.push(targetCard);
     else return message.reply(`❌ Card **#${indexInput}** not found in your inventory.`);
-  } 
+  }
   // ---------------------------------------------------------
   // 2. FILTER SELECTION (e.g. !addcard -t water, fire)
   // ---------------------------------------------------------
@@ -584,36 +584,30 @@ async function addCardToTrade(message) {
 
     let userCards = await Cards.find({ ownerId: userId }).populate("masterData");
 
-    // Helper to check comma-separated lists (OR logic)
     const matchesList = (targetValue, searchValue) => {
-      if (!searchValue) return true; // No filter = pass
+      if (!searchValue) return true;
       if (!targetValue) return false;
-      const searches = searchValue.split(",").map(s => s.trim());
-      // Return true if target includes ANY of the search terms
-      return searches.some(s => targetValue.toLowerCase().includes(s));
+      const searches = searchValue.split(",").map((s) => s.trim());
+      return searches.some((s) => targetValue.toLowerCase().includes(s));
     };
 
     cardsToAdd = userCards.filter((card) => {
       const master = card.masterData;
       if (!master) return false;
-      
-      // Check Favorites & Equipped Safety (Optional but recommended)
-      if (card.fav) return false; 
-      // if (card.selectedCard) return false; // (If you are using the unequip logic from earlier)
 
-      // Apply Filters
+      if (card.fav) return false;
+
       if (!matchesList(master.name, searchName)) return false;
       if (!matchesList(master.type, searchType)) return false;
       if (!matchesList(master.franchise, searchFranchise)) return false;
 
-      // Rarity and Ascension are usually single numbers, but we can support list too "4, 5"
       if (searchRarity) {
-        const rarities = searchRarity.split(",").map(n => parseInt(n));
+        const rarities = searchRarity.split(",").map((n) => parseInt(n));
         if (!rarities.includes(card.rarity)) return false;
       }
 
       if (searchAscension) {
-        const ascs = searchAscension.split(",").map(n => parseInt(n));
+        const ascs = searchAscension.split(",").map((n) => parseInt(n));
         if (!ascs.includes(card.ascension)) return false;
       }
 
@@ -622,30 +616,51 @@ async function addCardToTrade(message) {
   }
 
   // ---------------------------------------------------------
-  // 3. ADD TO TRADE
+  // 3. TEAM CHECK (NEW)
+  // ---------------------------------------------------------
+  if (cardsToAdd.length > 0) {
+    const user = await UserContainer.findOne({ userId });
+
+    // If user has a team, check against it
+    if (user && user.team && user.team.length > 0) {
+      // Find a card in 'cardsToAdd' that exists in 'user.team'
+      // user.team contains UIDs (numbers), cardsToAdd are Objects with .uid
+      const teamConflict = cardsToAdd.find((c) => user.team.includes(c.uid));
+
+      if (teamConflict) {
+        return message.reply(
+          `🚫 Card **#${teamConflict.uid}** is currently on your team, remove it first.`
+        );
+      }
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 4. ADD TO TRADE
   // ---------------------------------------------------------
   if (cardsToAdd.length === 0) return message.reply("🔍 No cards found to add.");
 
   const currentOfferIds = trade.offers[side].cards.map((id) => id.toString());
-  
+
   // Filter out duplicates (already in offer)
   const newCards = cardsToAdd.filter((c) => !currentOfferIds.includes(c._id.toString()));
 
-  if (newCards.length === 0) return message.reply("⚠️ All selected cards are already in the offer.");
+  if (newCards.length === 0)
+    return message.reply("⚠️ All selected cards are already in the offer.");
 
   const newIds = newCards.map((c) => c._id);
   trade.offers[side].cards.push(...newIds);
-  
+
   // Reset Confirmation
   trade.offers.sender.confirmed = false;
   trade.offers.receiver.confirmed = false;
 
   await trade.save();
-  
+
   message
     .reply(`✅ Added **${newCards.length}** cards to offer.`)
     .then((m) => setTimeout(() => m.delete(), 5000));
-  
+
   await updateTradeDashboardMessage(message, trade);
 }
 

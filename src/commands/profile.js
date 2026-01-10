@@ -4,7 +4,7 @@ const { EmbedBuilder } = require("discord.js");
 const { getRarityStars } = require("../functions");
 const { formatImage } = require("./infoCard");
 const { getAscIcon } = require("./inv_cards");
-
+const {goldIcon} = require('../commands/hourly_daily_weekly')
 // ==========================================
 // 🎨 PROGRESS BAR HELPERS
 // ==========================================
@@ -130,7 +130,7 @@ async function profile(message) {
       .addFields(
         {
           name: "💰 Wealth",
-          value: `🪙: **${user.gold}**\n💎: **${user.gem}**`,
+          value: `${goldIcon}: **${user.gold}**\n💎: **${user.gem}**`,
           inline: true,
         },
         {

@@ -1,10 +1,11 @@
 const { UserContainer } = require("../db");
+const {goldIcon} = require("../commands/hourly_daily_weekly")
 async function gold(message) {
   try {
     const userId = message.author.id;
     let existing = await UserContainer.findOne({ userId });
     if (existing) {
-      message.reply(`You currently have **${existing.gold}** 🪙.`);
+      message.reply(`You currently have **${existing.gold}** ${goldIcon}.`);
     } else {
       message.reply(
         "You dont have an account! Type ```!create``` to create an account"

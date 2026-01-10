@@ -1,6 +1,5 @@
 // index.js
 require("dotenv").config();
-const axios = require("axios");
 const token = process.env.DISCORD_TOKEN;
 const {
   connectDB,
@@ -9,16 +8,12 @@ const {
   Cards,
   Inventory,
   Mobs,
+  Raids,
 } = require("./db");
 const { addXp, getLevel, giveXpAndNotify } = require("./levelSystem");
-const {
-  getRarityStars,
-  wrapSkillDescription,
-  getNextUid,
-} = require("./functions");
+const { wrapSkillDescription, getNextUid } = require("./functions");
 const { id } = require("./commands/id");
 const { createAccount } = require("./commands/create");
-const { start } = require("./commands/start");
 const { hourly, daily, weekly } = require("./commands/hourly_daily_weekly");
 const { cards, inv, fav } = require("./commands/inv_cards");
 const { view } = require("./commands/viewCard");
@@ -33,6 +28,7 @@ const { dropCard } = require("./commands/dropCard");
 const { banners } = require("./Banners/banners");
 const { shop } = require("./shop/shop");
 const { buy } = require("./shop/buy");
+const { startRaidSweeper } = require("./utils/raidSweeper");
 const {
   dungeonHub,
   areaDetails,
@@ -62,10 +58,18 @@ const { ascension } = require("./characters/ascension");
 const { sellCard } = require("./commands/sellCard");
 const { questEmbed } = require("./quest/questEmbed");
 const { team } = require("./raid/playerTeam");
-const { teamset, teamremove } = require("./raid/selectTeam");
+const { teamset, teamremove, teamReset } = require("./raid/selectTeam");
 const { createRaid } = require("./raid/createRaid");
-
-connectDB();
+const { createMegaCard } = require("./raid/raidManager");
+const {
+  raidLobby,
+  joinRaid,
+  leaveRaid,
+  kickPlayer,
+  raidStart,
+  raidEntries,
+} = require("./raid/raidLobby");
+const { startRaidBattle } = require("./raid/raidBattle");
 
 if (!token) {
   console.error(
@@ -82,13 +86,14 @@ const client = new Client({
   ],
 });
 
-client.once(Events.ClientReady, (c) => {
+client.once(Events.ClientReady, async (c) => {
   console.log(`✅ Ready! Logged in as ${c.user.tag}`);
+  await connectDB();
+  startRaidSweeper(client);
 });
 
 const VALID_COMMANDS = new Set([
   "!id",
-  "!start",
   "!create",
   "!level",
   "!addxp",
@@ -126,6 +131,8 @@ const VALID_COMMANDS = new Set([
   "!bt",
   "!sbt",
   "!skipbattle",
+  "!gua", 
+  "!hackcard",
 
   "!dungeon",
   "!area",
@@ -149,35 +156,50 @@ const VALID_COMMANDS = new Set([
 const cooldowns = new Map();
 const COOLDOWN_SECONDS = 1;
 const prefix = "!";
-const ADMIN_ID = "490338110572331018";
+
+// ✅ ADMIN CONFIGURATION
+const ADMIN_IDS = ["490338110572331018", "739760362567630959"];
+const isAdmin = (id) => ADMIN_IDS.includes(id);
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
 
   // 1. PARSE COMMAND
   const args = message.content.trim().split(/ +/);
-  const commandName = args[0].toLowerCase(); // e.g., "!create", "!cards"
+  const commandName = args[0].toLowerCase(); 
 
   // 2. CHECK COOLDOWNS & VALIDITY
   if (message.content.startsWith(prefix)) {
     if (VALID_COMMANDS.has(commandName)) {
       const userId = message.author.id;
 
-      if (userId !== ADMIN_ID) {
+      // ====================================================
+      // GLOBAL ACCOUNT CHECK
+      // ====================================================
+      if (commandName !== prefix + "create" && commandName !== prefix + "help") {
+        const userExists = await UserContainer.exists({ userId });
+        if (!userExists) {
+          return message.reply(
+            "⚠️ You don't have a profile yet. Use `!create` first."
+          );
+        }
+      }
+
+      if (!isAdmin(userId)) {
         if (cooldowns.has(userId)) {
           const expirationTime =
             cooldowns.get(userId) + COOLDOWN_SECONDS * 1000;
           const now = Date.now();
 
           if (now < expirationTime) {
-            // const timeLeft = ((expirationTime - now) / 1000).toFixed(1);
             return message.reply(`✋ **Calm down!** You are typing too fast.`);
           }
         }
         cooldowns.set(userId, Date.now());
         setTimeout(() => cooldowns.delete(userId), COOLDOWN_SECONDS * 1000);
       }
-      //global stamina update
+      
+      // Global stamina update
       try {
         const user = await UserContainer.findOne({ userId });
         if (user) {
@@ -193,9 +215,38 @@ client.on(Events.MessageCreate, async (message) => {
   // ====================================================
   // ROUTING LOGIC (STRICT MATCHING)
   // ====================================================
-  //raid + team
+  
+  if (commandName === prefix + "raid" || commandName === prefix + "rd") {
+    const subCommand = args[1] ? args[1].toLowerCase() : "";
+
+    if (subCommand === "lobby") {
+      await raidLobby(message);
+    } else if (subCommand === "join") {
+      await joinRaid(message);
+    } else if (subCommand === "leave") {
+      await leaveRaid(message);
+    } else if (subCommand === "kick") {
+      await kickPlayer(message);
+    } else if (subCommand === "start") {
+      await raidStart(message);
+    } else if (subCommand === "entry" || subCommand === "e") {
+      await raidEntries(message);
+    } else if (subCommand === "battle" || subCommand === "bt") {
+      await startRaidBattle(message);
+    } else {
+      message.reply(
+        "⚠️ Invalid Raid Command.\nUsage: `!raid join [id]`, `!raid lobby`, `!raid leave`"
+      );
+    }
+  }
+  if (commandName === prefix + "teamstat") {
+    await createMegaCard(message);
+  }
   if (commandName === prefix + "team") {
     await team(message);
+  }
+  if (commandName === prefix + "resetteam" || commandName === prefix + "rt") {
+    await teamReset(message);
   }
   if (commandName === prefix + "teamset" || commandName === prefix + "ts") {
     await teamset(message);
@@ -207,13 +258,13 @@ client.on(Events.MessageCreate, async (message) => {
     await createRaid(message);
   }
 
+  // Quest & Trade
   if (commandName === prefix + "quest") {
     await questEmbed(message);
   }
   if (commandName === prefix + "trade") {
     await initiateTrade(message);
   }
-  //placeholder command
   if (commandName === prefix + "addcard" || commandName === prefix + "ac") {
     await addCardToTrade(message);
   }
@@ -242,7 +293,7 @@ client.on(Events.MessageCreate, async (message) => {
     await confirmTrade(message);
   }
 
-  //ascension
+  // Ascension & ID
   if (commandName === prefix + "ascend" || commandName === prefix + "as") {
     await ascension(message);
   }
@@ -252,19 +303,16 @@ client.on(Events.MessageCreate, async (message) => {
   }
 
   if (commandName === prefix + "sellcard" || commandName === prefix + "sc") {
-    // id(message); // Typo in your original code? Assuming you meant sell logic here
     message.reply("Sell card not implemented yet.");
-  }
-
-  if (commandName === prefix + "start") {
-    await start(message);
   }
 
   if (commandName === prefix + "create") {
     await createAccount(message);
   }
 
+  // ✅ ADDXP (Admin Only)
   if (commandName === prefix + "addxp") {
+    if (!isAdmin(message.author.id)) return; 
     const amount = parseInt(args[1]);
     if (isNaN(amount) || amount <= 0) {
       return message.reply("Give a positive XP number.");
@@ -295,7 +343,6 @@ client.on(Events.MessageCreate, async (message) => {
   if (commandName === prefix + "inv") {
     await inv(message);
   }
-  // ✅ STRICT CHECK: Prevents !create from triggering !cards
   if (commandName === prefix + "cards" || commandName === prefix + "c") {
     await cards(message);
   }
@@ -307,8 +354,10 @@ client.on(Events.MessageCreate, async (message) => {
     await sellCard(message);
   }
 
-  // Add Card (Admin/Debug)
+  // ✅ HACKCARD (Admin Only)
   if (commandName === prefix + "hackcard") {
+    if (!isAdmin(message.author.id)) return;
+
     try {
       const cardId = parseInt(args[1]);
       let rarity = parseInt(args[2]);
@@ -332,8 +381,8 @@ client.on(Events.MessageCreate, async (message) => {
       const baseStats = cardData.stats;
       const uniqueStats = {
         hp: Math.floor(
-          baseStats.hp * (3 + rarity) +
-            rarity * 20 +
+          baseStats.hp * (1.4 + rarity) +
+            rarity * 5 +
             Math.floor(Math.random() * 20)
         ),
         atk: baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10),
@@ -384,12 +433,17 @@ client.on(Events.MessageCreate, async (message) => {
   if (commandName === prefix + "pity") {
     await pity(message);
   }
+  
+  // ✅ GUARANTEED (Admin Only)
   if (commandName === prefix + "gua") {
+    if (!isAdmin(message.author.id)) return;
     await guaranteed(message);
   }
 
-  // Deletion
+  // ✅ DELETE ACCOUNT (Admin Only)
   if (commandName === prefix + "delete") {
+    if (!isAdmin(message.author.id)) return;
+
     const targetId = args[1];
     if (!targetId)
       return message.reply("You need to provide a user ID to delete.");
@@ -408,7 +462,10 @@ client.on(Events.MessageCreate, async (message) => {
     }
   }
 
+  // ✅ DELETE POKEMON DATA (Admin Only)
   if (commandName === prefix + "pd") {
+    if (!isAdmin(message.author.id)) return;
+
     const targetId = args[1];
     if (!targetId)
       return message.reply("You need to provide a Pokemon ID to delete.");
@@ -424,7 +481,7 @@ client.on(Events.MessageCreate, async (message) => {
   }
 
   // Admin Tools
-  if (commandName === prefix + "addindex" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "addindex" && isAdmin(message.author.id)) {
     try {
       const charList = Object.values(allCharacters);
       let added = 0;
@@ -450,7 +507,7 @@ client.on(Events.MessageCreate, async (message) => {
     }
   }
 
-  if (commandName === prefix + "addmob" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "addmob" && isAdmin(message.author.id)) {
     try {
       const list = mobData.mobs;
       if (!list || !Array.isArray(list))
@@ -534,7 +591,7 @@ client.on(Events.MessageCreate, async (message) => {
   }
 
   // Admin Cheats
-  if (commandName === prefix + "addgold" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "addgold" && isAdmin(message.author.id)) {
     const amount = parseInt(args[1]);
     if (isNaN(amount)) return message.reply("Please provide a valid number.");
 
@@ -553,7 +610,10 @@ client.on(Events.MessageCreate, async (message) => {
     }
   }
 
+  // ✅ RESET DUNGEON (Admin Only)
   if (commandName === prefix + "resetdun") {
+    if (!isAdmin(message.author.id)) return;
+
     try {
       const user = await UserContainer.findOne({ userId: message.author.id });
       if (user) {
@@ -571,7 +631,7 @@ client.on(Events.MessageCreate, async (message) => {
     }
   }
 
-  if (commandName === prefix + "addticket" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "addticket" && isAdmin(message.author.id)) {
     try {
       const toUser = message.mentions.users.first() || message.author;
       const targetUserId = toUser.id;
@@ -602,27 +662,31 @@ client.on(Events.MessageCreate, async (message) => {
     }
   }
 
-  if (commandName === prefix + "dacc" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "dacc" && isAdmin(message.author.id)) {
     const res = await UserContainer.deleteMany({});
     message.reply(`Deleted ${res.deletedCount} accounts.`);
   }
-  if (commandName === prefix + "dindex" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "draid" && isAdmin(message.author.id)) {
+    const res = await Raids.deleteMany({});
+    message.reply(`Deleted ${res.deletedCount} raids.`);
+  }
+  if (commandName === prefix + "dindex" && isAdmin(message.author.id)) {
     const res = await Index.deleteMany({});
     message.reply(`Deleted ${res.deletedCount} index entries.`);
   }
-  if (commandName === prefix + "dall" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "dall" && isAdmin(message.author.id)) {
     const res = await Cards.deleteMany({});
     message.reply(`Deleted ${res.deletedCount} cards.`);
   }
-  if (commandName === prefix + "dinv" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "dinv" && isAdmin(message.author.id)) {
     const res = await Inventory.deleteMany({});
     message.reply(`Deleted ${res.deletedCount} inventories.`);
   }
-  if (commandName === prefix + "dmob" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "dmob" && isAdmin(message.author.id)) {
     const res = await Mobs.deleteMany({});
     message.reply(`Deleted ${res.deletedCount} mobs.`);
   }
-  if (commandName === prefix + "adminstam" && message.author.id === ADMIN_ID) {
+  if (commandName === prefix + "adminstam" && isAdmin(message.author.id)) {
     const user = await UserContainer.findOne({ userId: message.author.id });
     if (user) {
       user.stam += 100;

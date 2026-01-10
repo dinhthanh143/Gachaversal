@@ -108,7 +108,7 @@ async function dungeonHub(message) {
         .setColor("#2b2d31")
         .setTitle(`☠️ Dungeon Map ☠️`)
         .setAuthor({
-            name: " ", 
+            name: message.author.username, 
             iconURL: message.author.displayAvatarURL({ dynamic: true })
         })
         .setImage("https://res.cloudinary.com/pachi/image/upload/v1766819403/Gemini_Generated_Image_qwbwx6qwbwx6qwbw_ltmsvw.png")

@@ -119,14 +119,26 @@ function applyEndTurnEffects(unit, opponent = null) {
 
       // ✅ PHAINON STORED DAMAGE
       else if (effect.stat === "storeDmg") {
-        const storedTotal = effect.extra || 0;
+        let storedTotal = effect.extra || 0;
+        
+        // Only trigger if we have damage stored and an opponent exists
         if (storedTotal > 0 && opponent) {
-          opponent.stats.hp -= storedTotal;
-          logs.push(
-            `☀️ **Echo of Calamity** expires! Unleashed **${storedTotal}** stored damage against **${opponent.name}**!`
-          );
+            
+            // 🔹 NEW: Check for HP < 50% Bonus
+            const hpPercent = unit.stats.hp / unit.maxHp;
+            let bonusMsg = "";
+            
+            if (hpPercent < 0.5) {
+                storedTotal = Math.floor(storedTotal * 1.3); // +30% Damage
+                bonusMsg = " (Critical HP Bonus +30%!)";
+            }
+
+            opponent.stats.hp -= storedTotal;
+            logs.push(
+              `☀️ **Echo of Calamity** expires! Unleashed **${storedTotal}** Light Damage${bonusMsg} against **${opponent.name}**!`
+            );
         } else {
-          logs.push(`☀️ **Echo of Calamity** faded.`);
+          logs.push(`☀️ **Echo of Calamity** faded (No damage stored).`);
         }
       }
 

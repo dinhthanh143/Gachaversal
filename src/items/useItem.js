@@ -240,7 +240,7 @@ async function useitem(message) {
             levelsGained++;
 
             // Update Stats per level
-            targetCard.stats.hp = Math.floor(targetCard.stats.hp * 1.02);
+            targetCard.stats.hp = Math.floor(targetCard.stats.hp * 1.015);
             targetCard.stats.atk = Math.floor(targetCard.stats.atk * 1.015);
             targetCard.stats.def = Math.floor(targetCard.stats.def * 1.013);
             targetCard.stats.speed = Math.floor(targetCard.stats.speed * 1.01);

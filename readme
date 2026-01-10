@@ -8,21 +8,17 @@ updated scaling system and display system
 balanced cards data
 ==================================
 to-do:
+discloud auto host
 stamina for each battle (scaled off threat level)
-check in index user in mongo before everything
-
+card drops every xxx mins
 ==================================
 extra:
-sword of divine : checks at turn start
-current sbt cant "all " and no check missing stam
+
+
 =========================
 card sorting: 
 useitem, view, select, invcard
 stats : dropcard/pullsystem
-=========================
-scaling:
-cards: 0.03/level
-mobs: 0.03/level
 =========================
 default skill
 strike : power strike
@@ -35,5 +31,5 @@ overload
 executioner
 trickroom
 dice
-
+nulify [psv]
 

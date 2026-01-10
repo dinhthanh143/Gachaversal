@@ -1,9 +1,11 @@
 const { UserContainer, Inventory } = require("../db");
 const { updateQuestProgress } = require("../quest/questManager");
-
+const {itemIcons } = require('../items/items')
 // ==========================
 // HOURLY COMMAND
 // ==========================
+const goldIcon = "<:coin:1458833303070183435>"
+const rtIcon = "<:raid_ticket:1458395626772627643>"
 async function hourly(message) {
   try {
     const userId = message.author.id;
@@ -26,7 +28,7 @@ async function hourly(message) {
 
     let stamCheck = "";
     const reward = 1000;
-    let stamReward = 500;
+    let stamReward = 15;
     
     // Check Stamina Cap
     if (user.stam >= user.stamCap) {
@@ -42,7 +44,7 @@ async function hourly(message) {
     // ✅ QUEST UPDATE: Hourly Claim
     await updateQuestProgress(user, "HOURLY_CLAIM", 1, message);
 
-    message.reply(`You collected **${reward} 💰** and ${stamReward} Stamina${stamCheck}!`);
+    message.reply(`You collected **${reward} ${goldIcon}** and ${stamReward} Stamina${stamCheck}!`);
   } catch (err) {
     console.error("Hourly error:", err);
     message.reply("My wallet just caught on fire. Try again later.");
@@ -91,12 +93,17 @@ async function daily(message) {
     const ticketReward = 2;
     const blessingReward = 2;
     const blessingId = "b3"; // Grand Blessing
+    const raidTicketRewards = 4
 
     // -- Add Tickets --
     const ticketIndex = inv.items.findIndex((i) => i.itemId === "ticket");
     if (ticketIndex > -1) inv.items[ticketIndex].amount += ticketReward;
     else inv.items.push({ itemId: "ticket", amount: ticketReward });
 
+ const raidTicketIndex = inv.items.findIndex((i) => i.itemId === "rt");
+    if (raidTicketIndex > -1) inv.items[raidTicketIndex].amount += raidTicketRewards;
+    else inv.items.push({ itemId: "rt", amount: raidTicketRewards });
+    
     // -- Add Blessings (b3) --
     const blessIndex = inv.items.findIndex((i) => i.itemId === blessingId);
     if (blessIndex > -1) inv.items[blessIndex].amount += blessingReward;
@@ -109,11 +116,12 @@ async function daily(message) {
 
     message.reply(
       `🌞 **Daily Claimed!**\n` +
-        `💰 +${goldReward.toLocaleString()} Gold\n` +
+        `${goldIcon} +${goldReward.toLocaleString()} Gold\n` +
         `💎 +${diamondReward} Diamond\n` +
         `⚡ Stamina fully refilled\n` +
         `🎫 +${ticketReward} Summon Tickets\n` +
-        `💫 +${blessingReward} Grand Blessings`
+        `💫 +${blessingReward} Grand Blessings\n` +
+        `${rtIcon} +${raidTicketRewards} Raid Tickets\n`
     );
   } catch (err) {
     console.error("Daily error:", err);
@@ -181,7 +189,7 @@ async function weekly(message) {
 
     message.reply(
       `📅 **Weekly Claimed!**\n` +
-        `💰 +${goldReward.toLocaleString()} Gold\n` +
+        `${goldIcon} +${goldReward.toLocaleString()} Gold\n` +
         `💎 +${diamondReward} Gems\n` +
         `🎫 +${ticketReward} Summon Tickets\n` +
         `💠 +${blessingReward} Divine Blessing`
@@ -192,4 +200,4 @@ async function weekly(message) {
   }
 }
 
-module.exports = { hourly, daily, weekly };
+module.exports = { hourly, daily, weekly,goldIcon };

@@ -124,7 +124,7 @@ module.exports = async function (player,playerType, mobType, rarity, enemyRarity
         inline: false
       }
     )
-    .setFooter({ text: `Battle in progress... ${turn}/30 Rounds` });
+    .setFooter({ text: `Battle in progress... ${turn}/35 Rounds` });
 
   const files = [];
 

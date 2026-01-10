@@ -1,17 +1,26 @@
+
 module.exports = {
+  // cc: {
+  //   name: "Characters Chest",
+  //   description: "Allows you to participate in raid battles.",
+  //   emoji: "<:raid_ticket:1458395626772627643>",
+  //   type: "Consumable",
+  //   currency: "gold",
+  // },
   rt: {
     name: "Raid Ticket",
-    description: "Unlocks a random 5-Star character from the global roster.",
-    emoji: "<:chest_5:1457265255553040529>",
+    description: "Allows you to participate in raid battles.",
+    emoji: "<:raid_ticket:1458395626772627643>",
     type: "Consumable",
-    currency: "gem",
+    price : 25000,
+    currency: "gold",
   },
   c5: {
-    name: "5-Star Character Chest",
+    name: "Premium Character Chest",
     description: "Unlocks a random 5-Star character from the global roster.",
     emoji: "<:chest_5:1457265255553040529>",
     type: "Consumable",
-    price: 350,
+    price: 440,
     currency: "gem",
   },
   b1: {

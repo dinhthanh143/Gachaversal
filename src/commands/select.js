@@ -3,6 +3,7 @@ const { getRarityStars } = require("../functions");
 const { EmbedBuilder } = require("discord.js");
 const { formatImage } = require("./infoCard");
 const { getAscIcon } = require("./inv_cards");
+const { RARITY_LEVEL_CAPS } = require("./viewCard");
 
 async function select(message) {
   try {
@@ -55,6 +56,10 @@ async function select(message) {
           }
         });
       }
+      const xpDisplay =
+        card.level >= RARITY_LEVEL_CAPS[card.rarity]
+          ? "Maxed"
+          : `${card.xp} / ${xpCap}`;
 
       // Build Embed
       const embed = new EmbedBuilder()
@@ -80,7 +85,7 @@ async function select(message) {
               `🩸 **HP:** ${card.stats.hp}\n` +
               `💨 **SPD:** ${card.stats.speed}\n` +
               `🛡️ **DEF:** ${card.stats.def}\n` +
-              `✨ **XP:** ${card.xp} / ${xpCap}`,
+              `✨ **XP:** ${xpDisplay}`,
           },
           {
             name: `Skill: ${master.skill.name} ${master.skill.icon || ""}`,
@@ -105,7 +110,7 @@ async function select(message) {
     // ✅ FETCH ALL CARDS
     let userCards = await Cards.find({ ownerId: userId })
       .populate("masterData")
-      .sort({ _id: 1 }); 
+      .sort({ _id: 1 });
 
     if (!userCards || userCards.length === 0) {
       return message.reply("You have no cards.");
@@ -113,8 +118,8 @@ async function select(message) {
 
     // ✅ FIND CARD MATCHING THE PERSISTENT UID
     const card = userCards.find((c, i) => {
-        const displayId = c.uid ? c.uid : (i + 1);
-        return displayId === indexInput;
+      const displayId = c.uid ? c.uid : i + 1;
+      return displayId === indexInput;
     });
 
     if (!card) {

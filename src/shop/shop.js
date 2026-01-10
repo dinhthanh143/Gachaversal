@@ -7,6 +7,7 @@ const {
   ButtonStyle,
   ComponentType,
 } = require("discord.js");
+const {goldIcon} = require('../commands/hourly_daily_weekly')
 
 // Visual Constants
 const BORDER_THICK = "**▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬**";
@@ -53,15 +54,14 @@ async function shop(message) {
         .setDescription(
           `${BORDER_THICK}\n` +
           `**👛 Your Wallet**\n` +
-          `💰 **${user.gold}** Gold   💎 **${user.gem}** Gems\n` +
+          `${goldIcon} **${user.gold}** Gold   💎 **${user.gem}** Gems\n` +
           `${BORDER_THICK}\n` +
-          `*Type \`!buy [item_id]\` to purchase items.*`
+          `*Type \`!buy [item_id] [quantity]\` to purchase items.*`
         )
         .setFooter({ text: `Page ${page + 1}/${totalPages} • Have fun purchasing` });
-
       if (currentItems.length > 0) {
         currentItems.forEach((item) => {
-          const currencyIcon = item.currency === "gem" ? "💎" : "💰";
+          const currencyIcon = item.currency === "gem" ? "💎" : goldIcon;
 
           embed.addFields({
             name: `${item.emoji} ${item.name} \`(${item.itemId})\``,

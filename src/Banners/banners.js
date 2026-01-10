@@ -20,8 +20,8 @@ const PITY_CAP = 60;
 const RATE_CONFIG = {
   p6: "0.5%",
   p5: "2.5%",
-  p4: "15%",
-  p3: "82%",
+  p4: "17%",
+  p3: "80%",
 };
 
 // Added Placeholders for the new banners

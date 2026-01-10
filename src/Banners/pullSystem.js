@@ -16,8 +16,8 @@ const {
 const RATES = {
   6: 0.005,
   5: 0.025,
-  4: 0.15,
-  3: 0.82,
+  4: 0.17,
+  3: 0.80,
 };
 
 const PITY_HARD_CAP = 60;
@@ -78,7 +78,7 @@ function calculateStats(baseStats, rarity) {
 
   return {
     hp: Math.floor(
-      baseStats.hp * (3 + rarity) + rarity * 20 + Math.floor(Math.random() * 20)
+      baseStats.hp * (2 + rarity) + rarity * 10 + Math.floor(Math.random() * 20)
     ),
     atk: baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10),
     def: baseStats.def + 20 * rarity + Math.floor(Math.random() * 10),

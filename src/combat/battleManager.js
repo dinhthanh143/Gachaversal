@@ -1,11 +1,11 @@
-// src/combat/battleManager.js
 const { UserContainer, Index, Inventory } = require("../db");
 const { DUNGEON_AREAS } = require("../dungeon/dungeonData");
 const { Skills, checkPreAttackPassives } = require("./skills");
 const createBattleEmbed = require("../ui/combatEmbed");
 const { processBattleRewards } = require("./combatRewards");
-const { updateQuestProgress } = require("../quest/questManager"); // ✅ Imported Quest Manager
+const { updateQuestProgress } = require("../quest/questManager"); 
 const { EmbedBuilder } = require("discord.js");
+const { goldIcon } = require("../commands/hourly_daily_weekly");
 const {
   isUserBattling,
   setUserBattling,
@@ -16,7 +16,7 @@ const { applyStartTurnEffects, applyEndTurnEffects } = require("./effects");
 const xpIcon = "<:xp:1454544536390078647>";
 const LOADING_GIF =
   "https://res.cloudinary.com/pachi/image/upload/v1767026500/Screenshot_2025-12-29_234113_t9vs0s.png";
-const MAX_TURNS = 30;
+const MAX_TURNS = 25;
 const STAMINA_COST = 10;
 
 const EMOJIS = {
@@ -183,7 +183,6 @@ async function skipBattle(message, inputTimes = 1) {
           `⚠️ Not enough Stamina for even 1 battle! (Need ${STAMINA_COST} ⚡)`
         );
       }
-      // No limit cap here anymore, it uses all available stamina
       requestedRuns = maxPossible;
     }
     // 2. Handle specific number input
@@ -191,11 +190,8 @@ async function skipBattle(message, inputTimes = 1) {
       requestedRuns = parseInt(inputTimes);
       if (isNaN(requestedRuns) || requestedRuns < 1) requestedRuns = 1;
 
-      // No MAX_BATCH_LIMIT check here anymore
-
       const totalStamCost = requestedRuns * STAMINA_COST;
 
-      // STRICT CHECK: Return error if specific amount is requested but not enough stamina
       if (user.stam < totalStamCost) {
         return message.reply(
           `⚠️ You don't have enough **${totalStamCost} ⚡** to do **${requestedRuns}** runs. You only have **${user.stam} ⚡**.`
@@ -234,7 +230,7 @@ async function skipBattle(message, inputTimes = 1) {
       .addFields(
         {
           name: "💰 Rewards",
-          value: `🪙 +${report.gold}\n${xpIcon} +${report.cardXp} (Card)\n${xpIcon} +${report.accountXp} (User)`,
+          value: `${goldIcon} +${report.gold}\n${xpIcon} +${report.cardXp} (Card)\n${xpIcon} +${report.accountXp} (User)`,
           inline: true,
         },
         {
@@ -252,7 +248,7 @@ async function skipBattle(message, inputTimes = 1) {
         inline: true,
       });
     }
- embed.addFields({
+    embed.addFields({
       name: "\u200B",
       value: "\u200B",
       inline: false,
@@ -530,13 +526,32 @@ async function startBattle(message) {
           const skillCost = actor.skill.requiredEnergy || 100;
           const canUseSkill = !isSilenced || isPassiveSkill;
 
+          // ===================================
+          // ⚡ SKILL EXECUTION
+          // ===================================
           if (actor.energy >= skillCost && canUseSkill) {
+            // 🛑 1. CAPTURE HP BEFORE
+            const hpBefore = target.stats.hp;
+
             const skillLogic = getSkillSafe(actor.skill.name);
             const skillResult = skillLogic.execute(
               actor,
               target,
               actor.skill.values
             );
+            
+            // 🛑 2. CALCULATE DAMAGE & PHAINON PASSIVE
+            const hpAfter = target.stats.hp;
+            const damageTaken = hpBefore - hpAfter;
+
+            if (damageTaken > 0 && target.effects) {
+                const storeEffect = target.effects.find(e => e.stat === "storeDmg");
+                if (storeEffect) {
+                    const amountToStore = Math.floor(damageTaken * (storeEffect.amount / 100));
+                    storeEffect.extra = (storeEffect.extra || 0) + amountToStore;
+                }
+            }
+
             actor.energy -= skillCost;
             logs.push(skillResult.log);
             updateBars();
@@ -584,9 +599,26 @@ async function startBattle(message) {
               await wait(2000);
             }
 
-            // ✅ 2. ATTACK PHASE
+            // ===================================
+            // ⚔️ BASIC ATTACK EXECUTION
+            // ===================================
+            // 🛑 1. CAPTURE HP BEFORE
+            const hpBefore = target.stats.hp;
+
             const basicLogic = getSkillSafe("Basic Attack");
             const basicResult = basicLogic.execute(actor, target);
+
+            // 🛑 2. CALCULATE DAMAGE & PHAINON PASSIVE
+            const hpAfter = target.stats.hp;
+            const damageTaken = hpBefore - hpAfter;
+
+            if (damageTaken > 0 && target.effects) {
+                const storeEffect = target.effects.find(e => e.stat === "storeDmg");
+                if (storeEffect) {
+                    const amountToStore = Math.floor(damageTaken * (storeEffect.amount / 100));
+                    storeEffect.extra = (storeEffect.extra || 0) + amountToStore;
+                }
+            }
 
             if (!isSilenced && !isPassiveSkill) {
               let baseEnergyGain = 25;
@@ -737,7 +769,7 @@ async function startBattle(message) {
         )
         .addFields({
           name: "Rewards",
-          value: `🪙 **+${report.gold + bonusGold}** \n ${xpIcon} **+${
+          value: `${goldIcon} **+${report.gold + bonusGold}** \n ${xpIcon} **+${
             report.cardXp
           }** (Card)\n 🆙 **+${report.accountXp}** (Account)`,
           inline: true,
@@ -785,7 +817,7 @@ async function startBattle(message) {
             },
             {
               name: "💰 Bonus Gold",
-              value: `+${report.lvlUpGold} 🪙`,
+              value: `+${report.lvlUpGold} ${goldIcon}`,
               inline: true,
             },
             {
@@ -812,4 +844,4 @@ async function startBattle(message) {
   }
 }
 
-module.exports = { startBattle, skipBattle, sbt };
+module.exports = { startBattle, skipBattle, sbt, generateProgressBar, EMOJIS };

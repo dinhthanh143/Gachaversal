@@ -11,7 +11,9 @@ const LEVEL_CAPS = {
   5: 90,
   6: 100,
 };
-
+function getXpCap(level) {
+  return 100 + level * 25;
+}
 const BLESSINGS = {
   b1: { name: "Minor Blessing", chance: 20, minThreat: 1 },
   b2: { name: "Major Blessing", chance: 8, minThreat: 1 },
@@ -107,7 +109,7 @@ async function processBattleRewards(
     report.levelsGained++;
     await updateQuestProgress(user, "CARD_LEVEL_UP", 1, message);
 
-    playerCard.stats.hp = Math.floor(playerCard.stats.hp * 1.017);
+    playerCard.stats.hp = Math.floor(playerCard.stats.hp * 1.015);
     playerCard.stats.atk = Math.floor(playerCard.stats.atk * 1.015);
     playerCard.stats.def = Math.floor(playerCard.stats.def * 1.013);
     playerCard.stats.speed = Math.floor(playerCard.stats.speed * 1.01);
@@ -125,8 +127,8 @@ async function processBattleRewards(
   user.gold += report.gold;
   user.xp += report.accountXp;
 
-  while (user.xp >= 100 + (user.level - 1) * 10) {
-    user.xp -= 100 + (user.level - 1) * 10;
+  while (user.xp >= getXpCap(user.level)) {
+  user.xp -= getXpCap(user.level);
     user.level++;
     report.accountLevelUp = true;
     if (user.stamCap  < 150 && user.level % 2 == 0) {
