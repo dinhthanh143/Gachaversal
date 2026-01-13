@@ -8,9 +8,9 @@ const TYPE_CHART = {
     "Wind 🌪️":      { strong: ["Earth ⛰️"],           weak: ["Nature 🌲"] },
     "Nature 🌲":    { strong: ["Wind 🌪️"],             weak: ["Fire 🔥"] },
 
-    "Physical ⚔️":  { strong: ["Tech 🤖"],             weak: ["Magic 🔮"] },
-    "Tech 🦾":      { strong: ["Magic 🔮"],            weak: ["Physical ⚔️"] },
-    "Magic 🔮":     { strong: ["Physical ⚔️"],         weak: ["Tech 🦾"] },
+    "Physical ⚔️":  { strong: ["Tech ⚙️"],             weak: ["Magic 🔮"] },
+    "Tech ⚙️":      { strong: ["Magic 🔮"],            weak: ["Physical ⚔️"] },
+    "Magic 🔮":     { strong: ["Physical ⚔️"],         weak: ["Tech ⚙️"] },
 
     "Light ☀️":     { strong: ["Dark 🌙"],             weak: ["Dark 🌙"] },
     "Dark 🌙":      { strong: ["Light ☀️"],            weak: ["Light ☀️"] },

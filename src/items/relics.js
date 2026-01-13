@@ -1,0 +1,492 @@
+module.exports = {
+  //weapon
+  dagger: {
+    id: "cd",
+    name: "Cheap Dagger",
+    atk: 25,
+    bonusType: {
+      atk: "flat",
+    },
+    type: "atk_bonus",
+    recipe: [],
+  },
+  dull_blade: {
+    id: "db",
+    name: "Dull Blade",
+    atk: 50,
+    bonusType: {
+      atk: "flat",
+    },
+    type: "atk_bonus",
+    recipe: [],
+  },
+  wooden_staff: {
+    id: "ws",
+    name: "Wooden Staff",
+    atk: 35,
+    energy_regen: 5,
+    bonusType: {
+      atk: "flat",
+      energy_regen: "percentage",
+    },
+    type: "staff",
+    recipe: [],
+  },
+  hunters_bow: {
+    id: "hb",
+    name: "Hunter's Bow",
+    atk: 35,
+    crit_rate: 7,
+    bonusType: {
+      atk: "flat",
+      crit_rate: "percentage",
+    },
+    type: "bow",
+    recipe: [],
+  },
+
+  // Advanced Tier Weapons
+  steel_spear: {
+    id: "sp",
+    name: "Steel Spear",
+    atk: 60,
+    def_ignore: 10,
+    bonusType: {
+      atk: "flat",
+      def_ignore: "percentage",
+    },
+    type: "spear",
+    recipe: ["db"],
+  },
+  flintlock_pistol: {
+    id: "fp",
+    name: "Flintlock Pistol",
+    atk: 55,
+    crit_rate: 13,
+    bonusType: {
+      atk: "flat",
+      crit_rate: "percentage",
+    },
+    type: "gun",
+    recipe: ["cd", "hb"],
+  },
+  arcane_tome: {
+    id: "at",
+    name: "Arcane Tome",
+    atk: 50,
+    energy_regen: 10,
+    burn_chance: 16,
+    bonusType: {
+      atk: "flat",
+      energy_regen: "percentage",
+      burn_chance: "percentage",
+    },
+    type: "staff",
+    recipe: ["ws"],
+  },
+  vampire_fang: {
+    id: "vd",
+    name: "Vampire Fang",
+    atk: 45,
+    lifesteal: 12,
+    bonusType: {
+      atk: "flat",
+      lifesteal: "percentage",
+    },
+    type: "dagger",
+    recipe: ["cd"],
+  },
+
+  // Epic Tier Weapons
+  dragonfire_rifle: {
+    id: "dfr",
+    name: "Dragonfire Rifle",
+    atk: 80,
+    crit_rate: 15,
+    burn_chance: 25,
+    bonusType: {
+      atk: "flat",
+      crit_rate: "percentage",
+      burn_chance: "percentage",
+    },
+    type: "gun",
+    recipe: ["fp", "at"],
+  },
+  executioners_axe: {
+    id: "ea",
+    name: "Executioner's Axe",
+    atk: 90,
+    crit_dmg: 25,
+    def_ignore: 15,
+    bonusType: {
+      atk: "flat",
+      crit_dmg: "percentage",
+      def_ignore: "percentage",
+    },
+    type: "axe",
+    recipe: ["db", "sp"],
+  },
+  storm_halberd: {
+    id: "sh",
+    name: "Storm Halberd",
+    atk: 75,
+    stun_chance: 18,
+    energy_regen: 8,
+    bonusType: {
+      atk: "flat",
+      stun_chance: "percentage",
+      energy_regen: "percentage",
+    },
+    type: "spear",
+    recipe: ["sp", "ws"],
+  },
+  voidpiercer_lance: {
+    id: "vl",
+    name: "Voidpiercer Lance",
+    atk: 85,
+    def_ignore: 25,
+    crit_rate: 10,
+    bonusType: {
+      atk: "flat",
+      def_ignore: "percentage",
+      crit_rate: "percentage",
+    },
+    type: "spear",
+    recipe: ["sp", "ea"],
+  },
+  soulthirster_blade: {
+    id: "stb",
+    name: "Soulthirster Blade",
+    atk: 70,
+    lifesteal: 20,
+    crit_rate: 12,
+    bonusType: {
+      atk: "flat",
+      lifesteal: "percentage",
+      crit_rate: "percentage",
+    },
+    type: "sword",
+    recipe: ["vd", "db"],
+  },
+
+  // Legendary Tier Weapons
+  eclipse_cannon: {
+    id: "ecc",
+    name: "Eclipse Cannon",
+    atk: 110,
+    crit_rate: 20,
+    crit_dmg: 35,
+    stun_chance: 30,
+    bonusType: {
+      atk: "flat",
+      crit_rate: "percentage",
+      crit_dmg: "percentage",
+      stun_chance: "percentage",
+    },
+    type: "gun",
+    recipe: ["dfr", "fp"],
+  },
+  deaths_scythe: {
+    id: "ds",
+    name: "Death's Scythe",
+    atk: 100,
+    crit_dmg: 45,
+    lifesteal: 25,
+    def_ignore: 20,
+    bonusType: {
+      atk: "flat",
+      crit_dmg: "percentage",
+      lifesteal: "percentage",
+      def_ignore: "percentage",
+    },
+    type: "scythe",
+    recipe: ["ea", "stb"],
+  },
+  inferno_scepter: {
+    id: "is",
+    name: "Inferno Scepter",
+    atk: 95,
+    burn_chance: 32,
+    energy_regen: 15,
+    crit_rate: 15,
+    bonusType: {
+      atk: "flat",
+      burn_chance: "percentage",
+      energy_regen: "percentage",
+      crit_rate: "percentage",
+    },
+    type: "staff",
+    recipe: ["at", "dfr"],
+  },
+  thundergods_wrath: {
+    id: "tgw",
+    name: "Thundergod's Wrath",
+    atk: 105,
+    stun_chance: 30,
+    crit_rate: 18,
+    energy_regen: 12,
+    bonusType: {
+      atk: "flat",
+      stun_chance: "percentage",
+      crit_rate: "percentage",
+      energy_regen: "percentage",
+    },
+    type: "spear",
+    recipe: ["sh", "vl"],
+  },
+
+  // Unique/Special Weapons
+  frostbite_revolver: {
+    id: "fr",
+    name: "Frostbite Revolver",
+    atk: 90,
+    crit_rate: 22,
+    freeze_chance: 35, // Freezes = stun + slow
+    speed: -5,
+    bonusType: {
+      atk: "flat",
+      crit_rate: "percentage",
+      freeze_chance: "percentage",
+      speed: "flat",
+    },
+    type: "gun",
+    recipe: ["ecc", "fp"],
+  },
+  bloodreaver_claymore: {
+    id: "brc",
+    name: "Bloodreaver Claymore",
+    atk: 120,
+    lifesteal: 35,
+    crit_dmg: 30,
+    speed: -8,
+    bonusType: {
+      atk: "flat",
+      lifesteal: "percentage",
+      crit_dmg: "percentage",
+      speed: "flat",
+    },
+    type: "sword",
+    recipe: ["ds", "stb"],
+  },
+  eternal_grimoire: {
+    id: "eg",
+    name: "Eternal Grimoire",
+    atk: 85,
+    energy_regen: 25,
+    burn_chance: 40,
+    poison_chance: 30,
+    bonusType: {
+      atk: "flat",
+      energy_regen: "percentage",
+      burn_chance: "percentage",
+      poison_chance: "percentage",
+    },
+    type: "staff",
+    recipe: ["is", "at"],
+  },
+  oblivion_railgun: {
+    id: "or",
+    name: "Oblivion Railgun",
+    atk: 115,
+    def_ignore: 40,
+    crit_rate: 25,
+    energy_regen: -10, // High cost weapon
+    bonusType: {
+      atk: "flat",
+      def_ignore: "percentage",
+      crit_rate: "percentage",
+      energy_regen: "percentage",
+    },
+    type: "gun",
+    recipe: ["ecc", "vl"],
+  },
+
+  //special
+
+  //armor
+  broken_armor: {
+    id: "ba",
+    name: "Broken Armor",
+    bonusType: {
+      hp: "flat",
+    },
+    hp: 100,
+    recipe: ["stone"],
+  },
+
+  iron_armor: {
+    id: "ia",
+    name: "Iron Armor",
+    hp: 150,
+    def: 7,
+    bonusType: {
+      hp: "flat",
+      def: "percentage",
+    },
+    recipe: [],
+  },
+
+  knights_plate: {
+    id: "kp",
+    name: "Knight's Plate",
+    def: 40,
+    hp: 150,
+    bonusType: {
+      def: "flat",
+      hp: "flat",
+    },
+    recipe: ["im", "la"],
+  },
+
+  // Epic Tier Armors
+  dragonscale_mail: {
+    id: "dsm",
+    name: "Dragonscale Mail",
+    def: 15,
+    hp: 200,
+    thorns_dmg: 20,
+    bonusType: {
+      def: "percentage",
+      hp: "flat",
+      thorns_dmg: "percentage",
+    },
+    recipe: ["kp", "tm"],
+  },
+
+  shadowweave_mantle: {
+    id: "swm",
+    name: "Shadowweave Mantle",
+    dodge_chance: 8,
+    speed: 12,
+    hp: 120,
+    bonusType: {
+      dodge_chance: "percentage",
+      speed: "percentage",
+      hp: "flat",
+    },
+    recipe: ["ec", "pv"],
+  },
+
+  sanctified_aegis: {
+    id: "sa",
+    name: "Sanctified Aegis",
+    def: 50,
+    hp: 12,
+    damage_reduction: 8,
+    bonusType: {
+      def: "flat",
+      hp: "percentage",
+      damage_reduction: "percentage",
+    },
+    recipe: ["kp", "la"],
+  },
+
+  wardstone_cuirass: {
+    id: "wc",
+    name: "Wardstone Cuirass",
+    def: 18,
+    hp: 180,
+    bonusType: {
+      def: "percentage",
+      hp: "flat",
+    },
+    recipe: ["im", "kp"],
+  },
+
+  // Legendary Tier Armors
+  ethereal_raiment: {
+    id: "er",
+    name: "Ethereal Raiment",
+    dodge_chance: 15,
+    speed: 15,
+    hp: 10,
+    damage_reduction: 10,
+    bonusType: {
+      dodge_chance: "percentage",
+      speed: "percentage",
+      hp: "percentage",
+      damage_reduction: "percentage",
+    },
+    recipe: ["swm", "ec"],
+  },
+  titan_fortress: {
+    id: "tf",
+    name: "Titan's Fortress",
+    def: 15,
+    hp: 300,
+    thorns_dmg: 25,
+    damage_reduction: 12,
+    bonusType: {
+      def: "percentage",
+      hp: "flat",
+      thorns_dmg: "percentage",
+      damage_reduction: "percentage",
+    },
+    recipe: ["dsm", "wc", "sa"],
+  },
+
+  abyssal_carapace: {
+    id: "ac",
+    name: "Abyssal Carapace",
+    def: 60,
+    hp: 250,
+    thorns_dmg: 25,
+    speed: -10,
+    damage_reduction: 15,
+    bonusType: {
+      def: "flat",
+      hp: "flat",
+      thorns_dmg: "percentage",
+      speed: "flat",
+      damage_reduction: "percentage",
+    },
+    recipe: ["dsm", "tf"],
+  },
+
+  // Unique/Special Armors
+  ghoststep_shroud: {
+    id: "gs",
+    name: "Ghoststep Shroud",
+    dodge_chance: 25,
+    hp: 200,
+    def: -20,
+    speed: 20,
+    bonusType: {
+      dodge_chance: "percentage",
+      hp: "flat",
+      def: "percentage",
+      speed: "percentage",
+    },
+    recipe: ["er", "ec"],
+  },
+  soulreaver_plate: {
+    id: "srp",
+    name: "Soulreaver Plate",
+    def: 45,
+    hp: 200,
+    thorns_dmg: 35,
+    lifesteal: 10,
+    bonusType: {
+      def: "flat",
+      hp: "flat",
+      thorns_dmg: "percentage",
+      lifesteal: "percentage",
+    },
+    recipe: ["tm", "dsm"],
+  },
+  stormwarden_aegis: {
+    id: "swa",
+    name: "Stormwarden Aegis",
+    def: 20,
+    hp: 15,
+    damage_reduction: 15,
+    energy: 15,
+    bonusType: {
+      def: "percentage",
+      hp: "percentage",
+      damage_reduction: "percentage",
+      energy: "percentage",
+    },
+    recipe: ["sa", "tf"],
+  },
+};

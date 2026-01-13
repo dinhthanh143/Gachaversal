@@ -1,4 +1,4 @@
-const { UserContainer, Inventory } = require("../db");
+const { UserContainer, Inventory, Ores } = require("../db");
 const { starterChoice } = require("../starter/starterChoice");
 
 async function createAccount(message) {
@@ -11,6 +11,7 @@ async function createAccount(message) {
     }
 
     await UserContainer.create({
+      username : message.author.username,
       userId,
       gold: 5000,
       gem: 100,
@@ -25,7 +26,11 @@ async function createAccount(message) {
 
     await Inventory.create({
       userId,
-      items: [{ itemId: "ticket", amount: 30 }],
+      items: [{ itemId: "ticket", amount: 60 }],
+    });
+    await Ores.create({
+      userId,
+      ores : []
     });
 
     message.reply("Your profile has been created successfully!");

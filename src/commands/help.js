@@ -18,19 +18,19 @@ async function help(message) {
         {
           name: "Profile / Account",
           value:
-            "`!profile` — Check profile stats\n`!level` — Check level & XP\n`!gold` — Check gold\n`!gem` — Check gems\n`!stam` — Check stamina\n`!pity` — Check gacha pity",
+            "`!profile` (`!p`) — Check profile stats\n`!level` — Check level & XP\n`!gold` (`!g`) — Check gold\n`!gem` — Check gems\n`!stam` (`!st`) — Check stamina\n`!pity` — Check gacha pity",
           inline: false,
         },
         {
           name: "Collection & Inventory",
           value:
-            "`!cards` — View your cards\n`!inv` — Check Inventory\n`!view <uid>` — View specific card details\n`!select <uid>` — Select main card\n`!fav <uid>` — Favorite a card\n`!ascend <uid>` — Ascend a card\n`!useitem <id> <amount>` — Use an item",
+            "`!cards` (`!c`) — View your cards\n`!inv` — Check Inventory\n`!view <uid>` — View specific card details\n`!select <uid>` — Select main card\n`!fav <uid>` — Favorite a card\n`!ascend <uid>` (`!as`) — Ascend a card\n`!useitem <id> <amount>` — Use an item\n`!dropcard` — Drop a card (test)",
           inline: false,
         },
         {
           name: "Economy & Shop",
           value:
-            "`!hourly` — Claim hourly reward\n`!daily` — Claim daily reward\n`!weekly` — Claim weekly reward\n`!shop` — Open the shop\n`!buy <id> <qty>` — Buy items\n`!trade @user` — Start a trade",
+            "`!hourly` (`!h`) — Claim hourly reward\n`!daily` (`!d`) — Claim daily reward\n`!weekly` — Claim weekly reward\n`!shop` — Open the shop\n`!buy <id> <qty>` — Buy items\n`!trade @user` — Start a trade",
           inline: false,
         },
         {
@@ -41,19 +41,31 @@ async function help(message) {
         {
           name: "Dungeon & Combat",
           value:
-            "`!dungeon` — Open Dungeon Hub\n`!area <id>` — Select an area\n`!stage <id>` — Select a stage\n`!battle` — Start a battle\n`!sbt <amount>` — Skip battle (requires stamina)\n`!next` — Move to the next stage",
+            "`!dungeon` — Open Dungeon Hub\n`!area <id>` — Select an area\n`!stage <id>` — Select a stage\n`!battle` (`!bt`) — Start a battle\n`!sbt <amount>` (`!skipbattle`) — Skip battle (requires stamina)\n`!next` — Move to the next stage",
           inline: false,
         },
         {
           name: "Raids & Teams",
           value:
-            "`!createraid` — Summon a Raid Boss\n`!raid lobby` — View active raids\n`!raid join <id>` — Join a raid\n`!raid battle` — Fight the boss (uses Entry)\n`!team` — View your raid team\n`!teamset <uid> <slot>` — Add card to team\n`!teamremove <slot>` — Remove card from team",
+            "`!createraid` (`!cr`) — Summon a Raid Boss\n`!raid lobby` — View active raids\n`!raid join <id>` — Join a raid\n`!raid battle` (`!raid bt`) — Fight the boss (uses Entry)\n`!team` — View your raid team\n`!teamset <uid> <slot>` (`!ts`) — Add card to team\n`!teamremove <slot>` (`!tr`) — Remove card from team\n`!resetteam` (`!rt`) — Clear your team",
           inline: false,
         },
         {
           name: "Index (Global)",
           value:
             "`!index` — List all Characters\n`!info <cardId>` — Show global card information",
+          inline: false,
+        },
+        {
+          name: "💡 Pro Tips (Filters)",
+          value:
+            "Commands like `!cards`, `!index`, `!sell`, and `!trade addcard` support advanced filtering:\n" +
+            "`-r <1-6>` : Filter by Rarity\n" +
+            "`-n <name>` : Filter by Name\n" +
+            "`-t <type>` : Filter by Element/Type\n" +
+            "`-f <fran>` : Filter by Franchise\n" +
+            "`-a` : Filter Ascended only\n" +
+            "**Example:** `!cards -r 5 -t fire`",
           inline: false,
         }
       )

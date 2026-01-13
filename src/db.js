@@ -127,6 +127,7 @@ const TradeSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now, expires: 600 },
 });
 const UserSchema = new mongoose.Schema({
+  username : { type: String, default: "User"},
   userId: { type: String, required: true, unique: true },
   gold: { type: Number, default: 0 },
   gem: { type: Number, default: 0 },
@@ -134,7 +135,7 @@ const UserSchema = new mongoose.Schema({
     type: [{ type: Number, default: null }],
     default: [null, null, null, null],
   },
-  powerLevel : { type: Number, default: 0 },
+  powerLevel: { type: Number, default: 0 },
   stam: { type: Number, default: 60 },
   lastStamUpdate: { type: Date, default: Date.now },
   // raidCreate: { type: Number, default: 2 },
@@ -148,6 +149,7 @@ const UserSchema = new mongoose.Schema({
       dateAssigned: Date,
     },
   ],
+  streak: { type: Number, default: 0 },
   lastQuestReset: { type: Date, default: new Date(0) },
   stamCap: { type: Number, default: 60 },
   lastHourly: { type: Date, default: null },
@@ -232,7 +234,7 @@ const RaidSchema = new mongoose.Schema({
       entriesLeft: { type: Number, default: 5 },
       lastRegen: { type: Date, default: Date.now },
       powerLevel: { type: Number, default: 0 },
-      lastAttack: { type: Date }
+      lastAttack: { type: Date },
     },
   ],
   channelId: { type: String },
@@ -260,14 +262,17 @@ const RaidSchema = new mongoose.Schema({
 });
 RaidSchema.methods.joinLobby = async function (user, userPower) {
   if (this.started) throw new Error("Raid has already started!");
-  if (this.participants.length >= this.maxPlayers) throw new Error("Lobby is full (5/5)!");
-  
+  if (this.participants.length >= this.maxPlayers)
+    throw new Error("Lobby is full (5/5)!");
+
   // 1. Check if user is banned
   if (this.bannedUsers.includes(user.id)) {
-    throw new Error("🚫 You have been kicked from this raid and cannot rejoin.");
+    throw new Error(
+      "🚫 You have been kicked from this raid and cannot rejoin."
+    );
   }
 
-  const isAlreadyIn = this.participants.some(p => p.userId === user.id);
+  const isAlreadyIn = this.participants.some((p) => p.userId === user.id);
   if (isAlreadyIn) throw new Error("You are already in this raid.");
 
   const isFirstJoiner = this.participants.length === 0;
@@ -277,7 +282,7 @@ RaidSchema.methods.joinLobby = async function (user, userPower) {
     isLeader: isFirstJoiner,
     entriesLeft: 5,
     lastRegen: new Date(),
-    powerLevel: userPower || 0
+    powerLevel: userPower || 0,
   });
 
   return this.save();
@@ -285,13 +290,15 @@ RaidSchema.methods.joinLobby = async function (user, userPower) {
 
 // ✅ UPDATED KICK METHOD (Add to ban list)
 RaidSchema.methods.kickMember = async function (leaderId, slotInput) {
-  const requestor = this.participants.find(p => p.userId === leaderId);
+  const requestor = this.participants.find((p) => p.userId === leaderId);
   if (!requestor || !requestor.isLeader) {
     throw new Error("Only the Raid Leader can kick members.");
   }
-  const index = slotInput - 1; 
+  const index = slotInput - 1;
   if (index < 0 || index >= this.participants.length) {
-    throw new Error(`Invalid slot number. Please choose between 1 and ${this.participants.length}.`);
+    throw new Error(
+      `Invalid slot number. Please choose between 1 and ${this.participants.length}.`
+    );
   }
   const target = this.participants[index];
   if (target.userId === leaderId) {
@@ -303,9 +310,12 @@ RaidSchema.methods.kickMember = async function (leaderId, slotInput) {
     const IDLE_LIMIT_MS = 15 * 60 * 1000; // 15 Minutes
     const now = new Date();
     const timeSinceLastRegen = now - new Date(target.lastRegen);
-    const isIdle = (target.entriesLeft >= MAX_ENTRIES) && (timeSinceLastRegen > IDLE_LIMIT_MS);
+    const isIdle =
+      target.entriesLeft >= MAX_ENTRIES && timeSinceLastRegen > IDLE_LIMIT_MS;
     if (!isIdle) {
-      throw new Error("⚠️ Cannot kick active players during battle! They must be idle (5/5 entries) for **15+ minutes**.");
+      throw new Error(
+        "⚠️ Cannot kick active players during battle! They must be idle (5/5 entries) for **15+ minutes**."
+      );
     }
   }
 
@@ -314,7 +324,11 @@ RaidSchema.methods.kickMember = async function (leaderId, slotInput) {
   this.bannedUsers.push(kickedUserId);
   this.participants.splice(index, 1);
   await this.save();
-  return { userId: kickedUserId, username: kickedUsername, raidId: this.raidId };
+  return {
+    userId: kickedUserId,
+    username: kickedUsername,
+    raidId: this.raidId,
+  };
 };
 RaidSchema.methods.updateUserEntries = function (userId) {
   const participant = this.participants.find((p) => p.userId === userId);
@@ -353,28 +367,28 @@ RaidSchema.methods.updateAllEntries = function () {
 
       if (timePassed >= REGEN_TIME) {
         const amount = Math.floor(timePassed / REGEN_TIME);
-        
+
         // Only update if there is actual change
         if (amount > 0) {
           const newEntries = Math.min(MAX_ENTRIES, p.entriesLeft + amount);
-          
+
           // If they hit max, we set the time to NOW (start of idle)
           // Otherwise, we keep the remainder time for the next point
           if (newEntries === MAX_ENTRIES) {
-             p.lastRegen = now; 
+            p.lastRegen = now;
           } else {
-             p.lastRegen = new Date(now.getTime() - (timePassed % REGEN_TIME));
+            p.lastRegen = new Date(now.getTime() - (timePassed % REGEN_TIME));
           }
 
           p.entriesLeft = newEntries;
           updated = true;
         }
       }
-    } 
+    }
     // 2. 🛑 IMPORTANT: If they already have 5 entries...
     else {
       // DO NOT update p.lastRegen = new Date();
-      // Leaving this block empty means p.lastRegen stays as the OLD time 
+      // Leaving this block empty means p.lastRegen stays as the OLD time
       // (the time they effectively became "Idle").
     }
   });
@@ -382,21 +396,20 @@ RaidSchema.methods.updateAllEntries = function () {
   return updated ? this.save() : Promise.resolve(this);
 };
 RaidSchema.methods.leaveLobby = async function (userId) {
-  const index = this.participants.findIndex(p => p.userId === userId);
-  if (index === -1) return false; 
-  
+  const index = this.participants.findIndex((p) => p.userId === userId);
+  if (index === -1) return false;
+
   const wasLeader = this.participants[index].isLeader;
   this.participants.splice(index, 1);
-  
+
   // Pass leader role if needed
   if (wasLeader && this.participants.length > 0) {
     this.participants[0].isLeader = true;
   }
-  
+
   // If everyone leaves, the raid effectively becomes a ghost instance until expiry
   return this.save();
 };
-
 
 RaidSchema.methods.startBattle = async function () {
   this.started = true;
@@ -411,7 +424,17 @@ RaidSchema.methods.takeDamage = function (amount) {
   }
 };
 
+const OresSchema = new mongoose.Schema({
+  userId: { type: String, required: true, unique: true },
+  ores: [
+    {
+      oreId: { type: String, required: true },
+      quantity: { type: Number, default: 0 },
+    },
+  ],
+});
 // Models
+const Ores = mongoose.model("Ores", OresSchema, "ores");
 const Raids = mongoose.model("Raids", RaidSchema, "raids");
 const Index = mongoose.model("Pokes", IndexSchema, "pokes");
 const UserContainer = mongoose.model("Users", UserSchema, "users");
@@ -430,4 +453,5 @@ module.exports = {
   Mobs,
   Trade,
   Raids,
+  Ores,
 };

@@ -68,6 +68,48 @@ function applyEndTurnEffects(unit, opponent = null) {
   const activeEffects = [];
 
   for (const effect of unit.effects) {
+    if (effect.name.includes("Immortal's Will")) {
+        // Safety: Ensure extra data exists
+        if (!Array.isArray(effect.extra)) {
+            activeEffects.push(effect); // Keep it to prevent crashing
+            continue;
+        }
+
+        const [flatDecay, wrathAtkPct] = effect.extra;
+
+        // 1. Apply Decay
+        effect.amount -= flatDecay;
+        unit.stats.def -= flatDecay;
+
+        // 2. Check Transformation
+        if (effect.amount <= 0) {
+            // Clean up negative remainder
+            if (effect.amount < 0) unit.stats.def += Math.abs(effect.amount);
+
+            // Apply Wrath ATK Buff
+            const wrathBoost = Math.floor(unit.stats.atk * (wrathAtkPct / 100));
+            unit.stats.atk += wrathBoost;
+            
+            // ✅ PUSH NEW BUFF (Mortal Wrath)
+            activeEffects.push({
+                name: "Mortal Wrath",
+                stat: "atk",
+                amount: wrathBoost,
+                turns: 999,
+                extra: null
+            });
+
+            // ✅ PUSH LOG (This must be here!)
+            logs.push(`🛡️ **Immortal's Will** shatters! **${unit.name}** enters **Mortal Wrath**!\nDEF Bonus lost. Gained **+${wrathBoost} ATK**!`);
+            
+            // Skip the rest of the loop for this specific effect 
+            // (prevents it from hitting the 'wore off' logic below)
+            continue; 
+        } else {
+            // Log Decay (Optional: Comment out if too spammy)
+            logs.push(`📉 **Immortal's Will** decays... DEF reduced by **${flatDecay}**.`);
+        }
+    }
     // --- Active Round-Based Effects ---
     if (effect.stat === "condRegen") {
       if (unit.stats.hp < unit.maxHp * 0.5) {
@@ -77,7 +119,8 @@ function applyEndTurnEffects(unit, opponent = null) {
           `✨ **${unit.name}**'s **${effect.name}** triggers! Healed **${healAmount}** HP.`
         );
       }
-    }
+    } 
+   
 
     // Decrement Turn
     effect.turns -= 1;

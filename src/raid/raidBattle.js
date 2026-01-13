@@ -1,14 +1,28 @@
 const { UserContainer, Raids, Cards, Index, Inventory } = require("../db");
 const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
-const { Skills, checkPreAttackPassives } = require("../combat/skills"); 
+const { checkPreAttackPassives } = require("../combat/combatHelpers");
+const { Skills } = require("../combat/skills/index");
 const { generateProgressBar, EMOJIS } = require("../combat/battleManager");
 const { applyStartTurnEffects, applyEndTurnEffects } = require("../combat/effects");
-// ✅ FIX: Import getBgPoolSize
 const { drawRaidCanvas, getBgPoolSize } = require("./raidCanva");
 const { getRarityStars, getNextUid } = require("../functions");
 
 const LOADING_GIF = "https://res.cloudinary.com/pachi/image/upload/v1767026500/Screenshot_2025-12-29_234113_t9vs0s.png";
 const MAX_TURNS = 20; 
+
+// ✅ ENRAGE CONFIGURATION
+const RAGE_START_TURN = 5;    // Phase 1 starts (Base scale)
+const RAGE_PHASE_2_TURN = 9;  // Phase 2 starts (Double scale)
+
+// Base Scaling per Rarity (as percentage, e.g., 0.12 = 12%)
+const RARITY_SCALING = {
+    1: 0.15,
+    2: 0.13,
+    3: 0.11,
+    4: 0.09,
+    5: 0.08,
+    6: 0.07
+};
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -56,9 +70,7 @@ function getSkillSafe(skillName) {
     };
 }
 
-// ✅ UPDATED: Accepts bgIndex
 async function createRaidEmbed(author, player, enemy, teamImages, bossImage, currentLog, turn, battleTitle, bgIndex) {
-    // ✅ Pass the persistent bgIndex to drawRaidCanvas
     const buffer = await drawRaidCanvas(teamImages, bossImage, bgIndex);
     const attachment = new AttachmentBuilder(buffer, { name: "raid-battle.png" });
 
@@ -232,7 +244,6 @@ async function startRaidBattle(message) {
     }
     entriesToUse = Math.min(entriesToUse, 5); 
 
-    // ✅ SELECT PERSISTENT BACKGROUND
     const poolSize = getBgPoolSize();
     const persistentBgIndex = Math.floor(Math.random() * poolSize);
 
@@ -313,6 +324,7 @@ async function startRaidBattle(message) {
                 speed: raid.stats.speed,
                 critRate: 5, critDmg: 150
             },
+            baseAtk: raid.stats.atk, // Store Base ATK for Rage Calc
             maxHp: raid.stats.hp, 
             energy: bossSkillRef.initialEnergy || 0,
             skill: {
@@ -327,7 +339,6 @@ async function startRaidBattle(message) {
         let turn = 1;
         let battleOver = false;
 
-        // ✅ Updated Display Helper with persistentBgIndex
         const updateDisplay = async (text, delay = 1500) => {
              const embedData = await createRaidEmbed(message.author, player, enemy, teamImages, enemy.image, text, turn, battleTitle, persistentBgIndex);
              await battleMsg.edit({ content: null, embeds: [embedData.embed], files: embedData.files });
@@ -350,6 +361,27 @@ async function startRaidBattle(message) {
         }
 
         while (!battleOver && turn <= MAX_TURNS) {
+            
+            // ✅ DAMAGE RAMP LOGIC (FIXED)
+            if (turn > RAGE_START_TURN) {
+                // 1. Determine Rate based on Phase
+                let currentRate = RARITY_SCALING[enemy.rarity] || 0.06;
+                if (turn >= RAGE_PHASE_2_TURN) {
+                    currentRate *= 2; // Double scaling in Phase 2
+                }
+
+                // 2. Additive Boost based on Base ATK
+                const boostAmount = Math.floor(enemy.baseAtk * currentRate);
+                enemy.stats.atk += boostAmount;
+                
+                // 3. Calculate Visuals
+                const rateDisplay = Math.round(currentRate * 100);
+                const totalBoostPercent = Math.floor(((enemy.stats.atk - enemy.baseAtk) / enemy.baseAtk) * 100);
+                
+                // 4. Log showing BOTH rate and total
+                await updateDisplay(`🔥 **${enemy.name}** enrages! (+**${rateDisplay}%** ATK) [Total: **+${totalBoostPercent}%**]`, 1500);
+            }
+
             const first = player.stats.speed >= enemy.stats.speed ? player : enemy;
             const second = first === player ? enemy : player;
 

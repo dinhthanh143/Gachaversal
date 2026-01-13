@@ -24,11 +24,11 @@ const { indexCard } = require("./commands/indexCard");
 const { infoCard } = require("./commands/infoCard");
 const { profile } = require("./commands/profile");
 const { select } = require("./commands/select");
-const { dropCard } = require("./commands/dropCard");
 const { banners } = require("./Banners/banners");
 const { shop } = require("./shop/shop");
 const { buy } = require("./shop/buy");
 const { startRaidSweeper } = require("./utils/raidSweeper");
+const { trySpawnCard } = require("./defaultEvents/dropEvent");
 const {
   dungeonHub,
   areaDetails,
@@ -61,6 +61,7 @@ const { team } = require("./raid/playerTeam");
 const { teamset, teamremove, teamReset } = require("./raid/selectTeam");
 const { createRaid } = require("./raid/createRaid");
 const { createMegaCard } = require("./raid/raidManager");
+const { checkAndResetQuests } = require("./quest/questManager");
 const {
   raidLobby,
   joinRaid,
@@ -131,7 +132,7 @@ const VALID_COMMANDS = new Set([
   "!bt",
   "!sbt",
   "!skipbattle",
-  "!gua", 
+  "!gua",
   "!hackcard",
 
   "!dungeon",
@@ -163,10 +164,10 @@ const isAdmin = (id) => ADMIN_IDS.includes(id);
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
-
+  trySpawnCard(message);
   // 1. PARSE COMMAND
   const args = message.content.trim().split(/ +/);
-  const commandName = args[0].toLowerCase(); 
+  const commandName = args[0].toLowerCase();
 
   // 2. CHECK COOLDOWNS & VALIDITY
   if (message.content.startsWith(prefix)) {
@@ -176,7 +177,10 @@ client.on(Events.MessageCreate, async (message) => {
       // ====================================================
       // GLOBAL ACCOUNT CHECK
       // ====================================================
-      if (commandName !== prefix + "create" && commandName !== prefix + "help") {
+      if (
+        commandName !== prefix + "create" &&
+        commandName !== prefix + "help"
+      ) {
         const userExists = await UserContainer.exists({ userId });
         if (!userExists) {
           return message.reply(
@@ -198,11 +202,12 @@ client.on(Events.MessageCreate, async (message) => {
         cooldowns.set(userId, Date.now());
         setTimeout(() => cooldowns.delete(userId), COOLDOWN_SECONDS * 1000);
       }
-      
+
       // Global stamina update
       try {
         const user = await UserContainer.findOne({ userId });
         if (user) {
+          await checkAndResetQuests(user);
           user.updateStamina();
           await user.save();
         }
@@ -215,7 +220,7 @@ client.on(Events.MessageCreate, async (message) => {
   // ====================================================
   // ROUTING LOGIC (STRICT MATCHING)
   // ====================================================
-  
+
   if (commandName === prefix + "raid" || commandName === prefix + "rd") {
     const subCommand = args[1] ? args[1].toLowerCase() : "";
 
@@ -312,7 +317,7 @@ client.on(Events.MessageCreate, async (message) => {
 
   // ✅ ADDXP (Admin Only)
   if (commandName === prefix + "addxp") {
-    if (!isAdmin(message.author.id)) return; 
+    if (!isAdmin(message.author.id)) return;
     const amount = parseInt(args[1]);
     if (isNaN(amount) || amount <= 0) {
       return message.reply("Give a positive XP number.");
@@ -433,7 +438,7 @@ client.on(Events.MessageCreate, async (message) => {
   if (commandName === prefix + "pity") {
     await pity(message);
   }
-  
+
   // ✅ GUARANTEED (Admin Only)
   if (commandName === prefix + "gua") {
     if (!isAdmin(message.author.id)) return;
@@ -535,10 +540,7 @@ client.on(Events.MessageCreate, async (message) => {
     }
   }
 
-  // Gameplay
-  if (commandName === prefix + "dropcard") {
-    await dropCard(message);
-  }
+  // Gamepla
   if (commandName === prefix + "index") {
     await indexCard(message);
   }

@@ -52,9 +52,6 @@ async function checkAndResetQuests(user) {
 async function updateQuestProgress(user, type, amount = 1, message = null) {
   if (!user || !user.quests || user.quests.length === 0) return;
 
-  // 1. Ensure we aren't updating expired quests
-  await checkAndResetQuests(user);
-
   let saveNeeded = false;
   let inv = null; 
   let justFinishedAll = false; 

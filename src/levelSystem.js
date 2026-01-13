@@ -1,33 +1,10 @@
-// levelSystem.js
-const { UserContainer } = require("./db");
+// src/levelSystem.js
+const { UserContainer, Inventory } = require("./db");
+const { goldIcon } = require("./commands/hourly_daily_weekly"); // Ensure path is correct
 
-// XP needed for next level
+// XP needed for next level (Must match profile.js logic)
 function xpForNextLevel(level) {
-  return 100 + (level - 1) * 10;
-}
-
-// Adds EXP & handles level-up logic
-async function addXp(userId, amount) {
-  let user = await UserContainer.findOne({ userId });
-  if (!user) {
-    return null;
-  }
-  user.xp += amount;
-  let leveledUp = false;
-
-  // Handle multiple level-ups in one shot
-  while (user.xp >= xpForNextLevel(user.level)) {
-    user.xp -= xpForNextLevel(user.level);
-    user.level++;
-    leveledUp = true;
-  }
-  await user.save();
-  return {
-    leveledUp,
-    level: user.level,
-    currentXp: user.xp,
-    nextLevelXp: xpForNextLevel(user.level),
-  };
+  return 100 + (level - 1) * 50; 
 }
 
 // Get player info
@@ -42,26 +19,6 @@ async function getLevel(userId) {
   };
 }
 
-async function giveXpAndNotify(message, amount, addXpFunc) {
-  const result = await addXpFunc(message.author.id, amount);
-
-  if (!result) {
-    message.reply("You don't exist yet... try `!create` first.");
-    return;
-  }
-
-  if (result.leveledUp) {
-    message.reply(
-      `🎉 Congrats! You leveled up! Current Level: **${result.level}**`
-    );
-  } else {
-    message.reply(
-      `+${amount} XP! Current XP: **${result.currentXp}/${result.nextLevelXp}**`
-    );
-  }
-}
 module.exports = {
-  addXp,
   getLevel,
-  giveXpAndNotify,
 };

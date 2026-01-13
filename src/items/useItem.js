@@ -8,6 +8,7 @@ const {
   ButtonStyle,
   ComponentType,
 } = require("discord.js");
+const { calculateStats } = require("../Banners/pullSystem");
 
 // ==========================================
 // 1. CONFIGURATION
@@ -31,17 +32,6 @@ const getCardLevelCap = (level) => {
     return 125000 + (level - 50) * 2000;
   }
 };
-
-function calculateStats(baseStats, rarity) {
-  if (!baseStats) baseStats = { hp: 75, atk: 60, def: 50, speed: 69 };
-  return {
-    hp: Math.floor(baseStats.hp * (3 + rarity) + rarity * 20 + Math.floor(Math.random() * 20)),
-    atk: Math.floor(baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10)),
-    def: Math.floor(baseStats.def + 20 * rarity + Math.floor(Math.random() * 10)),
-    speed: Math.floor(baseStats.speed + 7 * rarity + Math.floor(Math.random() * 5)),
-  };
-}
-
 // ==========================================
 // 2. MAIN COMMAND
 // ==========================================

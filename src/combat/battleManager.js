@@ -1,9 +1,10 @@
 const { UserContainer, Index, Inventory } = require("../db");
 const { DUNGEON_AREAS } = require("../dungeon/dungeonData");
-const { Skills, checkPreAttackPassives } = require("./skills");
+const { Skills } = require("./skills/index");
+const { checkPreAttackPassives } = require("./combatHelpers");
 const createBattleEmbed = require("../ui/combatEmbed");
 const { processBattleRewards } = require("./combatRewards");
-const { updateQuestProgress } = require("../quest/questManager"); 
+const { updateQuestProgress } = require("../quest/questManager");
 const { EmbedBuilder } = require("discord.js");
 const { goldIcon } = require("../commands/hourly_daily_weekly");
 const {
@@ -539,17 +540,21 @@ async function startBattle(message) {
               target,
               actor.skill.values
             );
-            
+
             // 🛑 2. CALCULATE DAMAGE & PHAINON PASSIVE
             const hpAfter = target.stats.hp;
             const damageTaken = hpBefore - hpAfter;
 
             if (damageTaken > 0 && target.effects) {
-                const storeEffect = target.effects.find(e => e.stat === "storeDmg");
-                if (storeEffect) {
-                    const amountToStore = Math.floor(damageTaken * (storeEffect.amount / 100));
-                    storeEffect.extra = (storeEffect.extra || 0) + amountToStore;
-                }
+              const storeEffect = target.effects.find(
+                (e) => e.stat === "storeDmg"
+              );
+              if (storeEffect) {
+                const amountToStore = Math.floor(
+                  damageTaken * (storeEffect.amount / 100)
+                );
+                storeEffect.extra = (storeEffect.extra || 0) + amountToStore;
+              }
             }
 
             actor.energy -= skillCost;
@@ -613,11 +618,15 @@ async function startBattle(message) {
             const damageTaken = hpBefore - hpAfter;
 
             if (damageTaken > 0 && target.effects) {
-                const storeEffect = target.effects.find(e => e.stat === "storeDmg");
-                if (storeEffect) {
-                    const amountToStore = Math.floor(damageTaken * (storeEffect.amount / 100));
-                    storeEffect.extra = (storeEffect.extra || 0) + amountToStore;
-                }
+              const storeEffect = target.effects.find(
+                (e) => e.stat === "storeDmg"
+              );
+              if (storeEffect) {
+                const amountToStore = Math.floor(
+                  damageTaken * (storeEffect.amount / 100)
+                );
+                storeEffect.extra = (storeEffect.extra || 0) + amountToStore;
+              }
             }
 
             if (!isSilenced && !isPassiveSkill) {

@@ -2,6 +2,8 @@ const { Cards, Index, Inventory } = require("../db");
 const { getFixedCardXp, getCardLevelCap } = require("../dungeon/dungeonData");
 const { getNextUid } = require("../functions");
 const { updateQuestProgress } = require("../quest/questManager");
+// ✅ IMPORTED: This is now the source of truth for stats
+const { calculateStats } = require("../Banners/pullSystem");
 
 const LEVEL_CAPS = {
   1: 40,
@@ -11,26 +13,17 @@ const LEVEL_CAPS = {
   5: 90,
   6: 100,
 };
+
 function getXpCap(level) {
   return 100 + level * 25;
 }
+
 const BLESSINGS = {
   b1: { name: "Minor Blessing", chance: 20, minThreat: 1 },
   b2: { name: "Major Blessing", chance: 8, minThreat: 1 },
   b3: { name: "Grand Blessing", chance: 1, minThreat: 2 },
   b4: { name: "Divine Blessing", chance: 0.5, minThreat: 3 },
 };
-
-function calculateStats(baseStats, rarity) {
-  const b = baseStats || { hp: 75, atk: 60, def: 50, speed: 69 };
-  const r = typeof rarity === "number" ? rarity : 1;
-  return {
-    hp: Math.floor(b.hp * (3 + r) + r * 20 + Math.floor(Math.random() * 20)),
-    atk: Math.floor(b.atk + 25 * r + Math.floor(Math.random() * 10)),
-    def: Math.floor(b.def + 20 * r + Math.floor(Math.random() * 10)),
-    speed: Math.floor(b.speed + 7 * r + Math.floor(Math.random() * 5)),
-  };
-}
 
 function rollDropRarity(threatLevel) {
   const rand = Math.random() * 100;
@@ -87,10 +80,9 @@ async function processBattleRewards(
   const threatLevel = mobTemplate.rarity || 1;
 
   // --- A. RESOURCE CALCULATION ---
-  // ✅ Now just reads from the Data we fixed in dungeonData.js
   const goldPerRun = mobTemplate.rewards.gold || 50; 
   const cardXpPerRun = getFixedCardXp(difficulty);
-  const accountXpPerRun = mobTemplate.rewards.xp
+  const accountXpPerRun = mobTemplate.rewards.xp || 10;
 
   for (let i = 0; i < loops; i++) {
     report.gold += goldPerRun;
@@ -128,7 +120,7 @@ async function processBattleRewards(
   user.xp += report.accountXp;
 
   while (user.xp >= getXpCap(user.level)) {
-  user.xp -= getXpCap(user.level);
+    user.xp -= getXpCap(user.level);
     user.level++;
     report.accountLevelUp = true;
     if (user.stamCap  < 150 && user.level % 2 == 0) {
@@ -159,7 +151,10 @@ async function processBattleRewards(
     // -- Card Drop --
     if (baseData) {
       const dropRarity = rollDropRarity(threatLevel);
+      
+      // ✅ USES IMPORTED FUNCTION HERE
       const uniqueStats = calculateStats(baseData.stats, dropRarity);
+      
       const nextUid = await getNextUid(userId);
       await Cards.create({
         ownerId: userId,

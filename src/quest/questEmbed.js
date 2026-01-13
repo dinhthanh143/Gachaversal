@@ -43,9 +43,6 @@ async function questEmbed(message) {
 
     if (!user) return message.reply("You need to `!create` an account first.");
 
-    // 1. Force a check (generates new quests if needed)
-    await checkAndResetQuests(user);
-
     // 2. Prepare Embed
     const timeRemaining = getTimeRemaining();
     

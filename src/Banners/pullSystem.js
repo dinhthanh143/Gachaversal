@@ -81,7 +81,7 @@ function calculateStats(baseStats, rarity) {
       baseStats.hp * (2 + rarity) + rarity * 10 + Math.floor(Math.random() * 20)
     ),
     atk: baseStats.atk + 25 * rarity + Math.floor(Math.random() * 10),
-    def: baseStats.def + 20 * rarity + Math.floor(Math.random() * 10),
+    def: baseStats.def + 18 * rarity + Math.floor(Math.random() * 10),
     speed: baseStats.speed + 7 * rarity + Math.floor(Math.random() * 5),
   };
 }

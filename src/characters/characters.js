@@ -4,7 +4,8 @@ const galbrena = {
   name: "Galbrena",
   franchise: "Wuthering Waves",
   type: "Fire 🔥",
-  stats: { atk: 59, hp: 78, speed: 75, def: 60 },
+  //71 78
+  stats: { atk: 1, hp: 178, speed: 75, def: 60 },
   skill: {
     icon: "<:galbrena_skill:1446787462742409298>",
     name: "Flamming bullets",
@@ -12,7 +13,7 @@ const galbrena = {
       "Fires incendiary rounds that deal {0}× **Max HP** damage and have a {1}% chance to ignite the target, dealing 7% of opponent's Max HP as damage every turn for 2 turns.",
     // ✅ Single Variable: Wrapped in one outer array
     values: [
-      [0.1, 0.15, 0.25, 0.3, 0.4, 0.5],
+      [0.2, 0.25, 0.3, 0.35, 0.45, 0.55],
       [25, 30, 35, 40, 45, 50],
     ],
   },
@@ -27,7 +28,7 @@ const carlotta = {
   name: "Carlotta Montelli",
   franchise: "Wuthering Waves",
   type: "Ice ❄️",
-  stats: { atk: 67, hp: 70, speed: 86, def: 53 },
+  stats: { atk: 67, hp: 70, speed: 86, def: 55 },
   skill: {
     icon: "<:carlotta_skill:1446787543092822027>",
     name: "Piercing Shards",
@@ -94,7 +95,7 @@ const ye = {
     icon: "<:ye_skill:1446822377101983787>",
     name: "Sword Of The Divine [PASSIVE]",
     description:
-      "Upon entering battle, if Speed is lower than the target’s, gains {0}% lifesteal and +{1}% ATK ; otherwise, gains +{1}% ATK \nand +{2}% Crit Rate.",
+      "Upon entering battle, if Speed is lower than the target’s, gains {0}% lifesteal and +{1}% ATK, otherwise, gains +{1}% ATK and +{2}% Crit Rate.",
     values: [
       [17, 22, 29, 36, 43, 50], // Lifesteal %
       [10, 14, 20, 25, 30, 35], // ATK %
@@ -102,7 +103,7 @@ const ye = {
     ],
   },
   image:
-    "https://res.cloudinary.com/pachi/image/upload/v1766652693/ye_u8zzsw.jpg",
+    "https://res.cloudinary.com/pachi/image/upload/v1768231325/f1c6a7916a3d9f0bdd782aa639871d70_qgbx90.jpg",
   cardColor: "#ebb734",
 };
 
@@ -134,7 +135,7 @@ const miyabi = {
   name: "Hoshimi Miyabi",
   franchise: "Zenless Zone Zero",
   type: "Ice ❄️",
-  stats: { atk: 81, hp: 66, speed: 89, def: 55 },
+  stats: { atk: 82, hp: 66, speed: 94, def: 56 },
   skill: {
     icon: "<:miyabi_skill:1447562052771123323>",
     name: "Judgement Cut",
@@ -265,7 +266,7 @@ const herta = {
     ],
   },
   image:
-    "https://res.cloudinary.com/pachi/image/upload/v1767285274/14081530953dd062ced940ea02798f2d_zpnrhp.jpg",
+    "https://res.cloudinary.com/pachi/image/upload/v1768233716/e336a3388f8cfe806f2dc0544ad51007_fzsdnt.jpg",
   cardColor: "#7f0dd6",
 };
 
@@ -308,7 +309,7 @@ const phainon = {
     name: "Echo of Calamity",
     description:
       "For the next 3 turns, whenever Phainon takes damage, he stores {0}% of the damage received. When the duration ends, he retaliates against the target, dealing Light damage.Retaliation damage is increased by 30% if Phainon’s HP is below 50%",
-    values: [[55, 60, 65, 70, 75, 80]]
+    values: [[55, 60, 65, 70, 75, 80]],
   },
   image:
     "https://res.cloudinary.com/pachi/image/upload/v1767422348/02b96ba754da2755c5691703772980de_udasvi.jpg",
@@ -369,8 +370,8 @@ const skirk = {
   stats: {
     atk: 72,
     hp: 78,
-    speed: 75,
-    def: 70,
+    speed: 86,
+    def: 68,
   },
   skill: {
     icon: "<:skirk_skill:1456936895115427860>",
@@ -530,49 +531,57 @@ const yuzuha = {
     "https://res.cloudinary.com/pachi/image/upload/v1767459013/6d474d90e1557b32084db830752f1b98_dcjwno.jpg",
   cardColor: "#e02f2f",
 };
-//wip
 const skadi = {
   pokeId: 25,
   name: "Skadi",
   franchise: "Arknights",
   type: "Water 💧 ",
-   stats: {
-    atk: 0,
-    hp: 0,
-    speed: 0,
-    def: 0,
+  stats: {
+    atk: 74,
+    hp: 76,
+    speed: 73,
+    def: 67,
   },
   skill: {
-    icon: "",
-    name: "",
-    description: "",
+    icon: "<:skadiS:1459944538243207168>",
+    name: "Tides of the Abyssal Hunter",
+    description:
+      "Channels the power of the deep sea for 3 turns, increasing her ATK by {0}%, HP by {1}%,\nand DEF by {2}%.",
     values: [
-      [12, 14, 16, 18, 20, 22],
-      [12, 14, 16, 18, 20, 22],
+      [18, 21, 24, 27, 30, 33], // ATK boost
+      [13, 15, 18, 21, 23, 25], // HP boost
+      [12, 15, 18, 21, 24, 27], // DEF boost
     ],
   },
-  image: "https://res.cloudinary.com/pachi/image/upload/v1767609894/333d0ac60c8f81fd8a96f3bbb9f58466_ivxr3i.jpg",
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767609894/333d0ac60c8f81fd8a96f3bbb9f58466_ivxr3i.jpg",
   cardColor: "#ab0a40",
 };
+
 const mydei = {
   pokeId: 26,
   name: "Mydei",
   franchise: "Honkai Star Rail",
   type: "Earth ⛰️",
-   stats: {
-    atk: 0,
-    hp: 0,
-    speed: 0,
-    def: 0,
+  stats: {
+    atk: 78,
+    hp: 83,
+    speed: 58,
+    def: 68,
   },
   skill: {
-    icon: "",
-    name: "",
-    description: "",
+    icon: "<:mydeiS:1459927676361113621>",
+    name: "Immortal's Will [PASSIVE]",
+    description:
+      "Upon entering battle, Mydei gains {0}% bonus DEF. This bonus decreases by {1}% at the end of each turn. When the bonus DEF reaches 0%, Mydei enters **Mortal Wrath** state, gaining {2}% ATK for the rest of the battle.",
     values: [
+      [30, 40, 50, 60, 70, 80], // Starting DEF bonus
+      [10, 12, 14, 16, 18, 20], // DEF decay per turn
+      [14, 16, 19, 22, 25, 28], // ATK gained after transformation
     ],
   },
-  image: "https://res.cloudinary.com/pachi/image/upload/v1767609904/5dd5a00d3ba240e3bb754c341bf25e6d_hxtgvo.jpg",
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1767609904/5dd5a00d3ba240e3bb754c341bf25e6d_hxtgvo.jpg",
   cardColor: "#dea426",
 };
 const mudrock = {
@@ -580,7 +589,108 @@ const mudrock = {
   name: "Mudrock",
   franchise: "Arknights",
   type: "Earth ⛰️",
-   stats: {
+  stats: {
+    atk: 61,
+    hp: 83,
+    speed: 52,
+    def: 91,
+  },
+  skill: {
+    icon: "<:mudrock_skill:1459919648584634368>",
+    name: "Indomitable Fortress [PASSIVE]",
+    description:
+      "Gains {0}% Crit Rate. When she lands a Critical Hit, has a {1}% chance to Stun the target for 1 turn but takes damage equal to {2}% of her Max HP from the overwhelming force. Stunned enemies cannot be Stunned again for 3 turns.",
+    values: [
+      [18, 21, 25, 30, 35, 40],
+      [35, 40, 45, 50, 55, 60],
+      [11, 10, 9, 8, 7, 6],
+    ],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1768061176/mudrockjpg_ipvzzr.png",
+  cardColor: "#c20e44",
+};
+const lemuen = {
+  pokeId: 28,
+  name: "Lemuen",
+  franchise: "Arknights",
+  type: "Tech ⚙️",
+  stats: {
+    atk: 93,
+    hp: 73,
+    speed: 40,
+    def: 70,
+  },
+  skill: {
+    icon: "<:lemuenS:1460290133575335936>",
+    name: "Orbital Strike",
+    description:
+      "Calls down a precision strike from orbit, dealing {0}% of the target's Max HP +{1}% of her ATK as True Damage. If the target's HP is above 50%, the strike becomes a Critical Hit but the recoil Stuns Lemuen for 1 turn in the next Round.",
+    values: [
+      [14, 15, 16, 19, 22, 25],
+      [5, 7, 9, 11, 13, 15],
+    ],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1768142807/d1b9692b27d00ddb78800ab10d781672_ncpkmj.jpg",
+  cardColor: "#e3aad7",
+};
+const lingsha = {
+  pokeId: 29,
+  name: "Lingsha",
+  franchise: "Honkai Star Rail",
+  type: "Fire 🔥",
+  stats: {
+    atk: 62,
+    hp: 82,
+    speed: 78,
+    def: 68,
+  },
+  skill: {
+    icon: "<:lingshaS:1460303491150123051>",
+    name: "Cinderbloom Ritual",
+    description:
+      "For the next 3 turns, Lingsha converts {0}% of Basic ATK damage she receives into healing instantly. If hit by an enemy Skill, the conversion rate decreases by {1}% .",
+    values: [
+      [55, 60, 65, 70, 75, 80], // Base conversion %
+      [67, 64, 61, 58, 54, 50], // Penalty % when hit by Skill
+    ],
+  },
+  image:
+    "https://res.cloudinary.com/pachi/image/upload/v1768149307/b5d292074b0d2354ccd18f2f9d282491_yyxojn.jpg",
+  cardColor: "#e65343",
+};
+const boothil = {
+  pokeId: 30,
+  name: "Boothill",
+  franchise: "Honkai Star Rail",
+  type: "Tech ⚙️",
+  stats: {
+    atk: 72,
+    hp: 73,
+    speed: 71,
+    def: 70,
+  },
+  skill: {
+    icon: "<:boothillS:1460544154651197523>",
+    name: "Wanted: Dead or Alive",
+    description:
+      "Applies a stack of **WANTED** onto the target, reducing their DEF by {0}% for 3 turns. Each time Boothill attacks the marked target, their DEF is further reduced by {1}%. This effect stacks up to 3 times.",
+    values: [
+      [20, 25, 30, 35, 40, 45], // Initial DEF reduction %
+      [3, 4, 5, 6, 8, 10], // Stackable DEF shred per hit %
+    ],
+  },
+  image: "https://res.cloudinary.com/pachi/image/upload/v1768231109/b9ba4a59723ec85474a95c946de6f563_puasmw.jpg",
+  cardColor: "#960202",
+};
+
+const phrolova = {
+  pokeId: 31,
+  name: "Phrolova",
+  franchise: "Wuthering Waves",
+  type: "Dark 🌙",
+  stats: {
     atk: 0,
     hp: 0,
     speed: 0,
@@ -590,14 +700,66 @@ const mudrock = {
     icon: "",
     name: "",
     description: "",
+    values: [[]],
+  },
+  image: "https://res.cloudinary.com/pachi/image/upload/v1768231257/04497d8d11491af33dc0d8be26f6b33a_ccrpyb.jpg",
+  cardColor: "#cc3e31",
+};
+const yingjuan = {
+  pokeId: 32,
+  name: "Ying Juan",
+  franchise: "Honkai Star Rail",
+  type: "Electric ⚡",
+  stats: {
+    atk: 80,
+    hp: 79,
+    speed: 68,
+    def: 67,
+  },
+  skill: {
+    icon: "<:yingjuan_skill:placeholder>",
+    name: "Skyfall Sovereign",
+    description: "Summons the Lightning Lord for {0} turns. While active, the Lightning Lord strikes the enemy at the end of each turn, dealing {1}% of Ying Juan's ATK as Electric damage. Each consecutive strike increases damage by {2}% of base DMG.",
     values: [
+      [1, 2, 2, 2, 3, 4], // Duration
+      [40, 45, 50, 55, 60, 65], // Base Lightning Lord damage %
+      [10, 12, 14, 16, 18, 20], // Stacking damage increase %
     ],
   },
-  image: "https://res.cloudinary.com/pachi/image/upload/v1768061176/mudrockjpg_ipvzzr.png",
-  cardColor: "#c20e44",
+  image: "https://res.cloudinary.com/pachi/image/upload/v1768231185/93e93b16a57c5be2833539f1e91af93b_lskdwn.jpg",
+  cardColor: "#e6d302",
+};
+//trick roomm
+const ruanmei = {
+  pokeId: 33,
+  name: "Ruan Mei",
+  franchise: "Honkai Star Rail",
+  type: "Water 💧",
+  stats: {
+    atk: 56,
+    hp: 79,
+    speed: 84,
+    def: 72,
+  },
+  skill: {
+    icon: "<:ruanmeiS:1460541468627308659>",
+    name: "Equilibrium Transference",
+    description:
+      "For {0} turns: If opponent's ATK is higher, steals {1}% of the ATK gap whilst reducing the opponent's ATK by the same amount. If her ATK is already higher, gains bonus ATK equal to {2}% of the gap.",
+    values: [
+      [2, 3, 3, 4, 4, 5], //duration
+      [27, 30, 33, 36, 39, 42], // Steal % when behind
+      [20, 24, 28, 32, 36, 40], // Bonus % when ahead
+    ],
+  },
+  image: "https://res.cloudinary.com/pachi/image/upload/v1768231479/849efbeb5b578e24fe84c6ffddcdf2b6_f7uzxe.jpg",
+  cardColor: "#64d4e3",
 };
 module.exports = {
   galbrena,
+  boothil,
+  phrolova,
+  yingjuan,
   carlotta,
   chisa,
   rover,
@@ -618,8 +780,13 @@ module.exports = {
   flins,
   doctor,
   castorice,
+  lemuen,
+  lingsha,
   amiya,
   wisadel,
   yuzuha,
-  skadi,mydei, mudrock
+  skadi,
+  mydei,
+  mudrock,
+  ruanmei
 };

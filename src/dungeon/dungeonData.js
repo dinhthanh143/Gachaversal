@@ -156,7 +156,7 @@ const DUNGEON_AREAS = {
   1: {
     name: "Shallow Floors ⚔️",
     stages: {
-      1: createStage(2, moddedMob(1, 7, 1)),   // Galbrena Lv.2 Common
+      1: createStage(2, moddedMob(1, 50, 1)),   // Galbrena Lv.2 Common
       2: createStage(3, moddedMob(2, 7, 1)),   // Carlotta Lv.3 Common
       3: createStage(4, moddedMob(3, 7, 1)),   // Chisa Lv.4 Common
       4: createStage(4, moddedMob(1, 7, 2)),   // Galbrena Lv.5 Rare

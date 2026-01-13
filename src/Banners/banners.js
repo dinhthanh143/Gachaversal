@@ -1,3 +1,9 @@
+const {
+  isUserPulling,
+  setUserPulling,
+  removeUserPulling,
+} = require("../utils/activeStates"); // ✅ Import State Manager
+
 const { Index, UserContainer, Inventory } = require("../db");
 const { getRarityStars } = require("../functions");
 const { getFeaturedBanner } = require("./bannerUtils");
@@ -24,7 +30,6 @@ const RATE_CONFIG = {
   p3: "80%",
 };
 
-// Added Placeholders for the new banners
 const IMAGES = {
   WUWA: "https://res.cloudinary.com/pachi/image/upload/v1766547601/wuwa_banner_d9spqp.jpg",
   ZZZ: "https://res.cloudinary.com/pachi/image/upload/v1766547600/zzz_banner_wuv8sz.png",
@@ -32,7 +37,6 @@ const IMAGES = {
     "https://res.cloudinary.com/pachi/image/upload/v1766547600/banner_01_pebjwl.png",
   GENERIC:
     "https://res.cloudinary.com/pachi/image/upload/v1766548888/genericBg_khyk8b.png",
-  // New Placeholders
   GENSHIN:
     "https://res.cloudinary.com/pachi/image/upload/v1766937166/Genshin-Impact-Fontaine-nhan-vat-1-1536x864_ckcrik.png",
   HSR: "https://res.cloudinary.com/pachi/image/upload/v1766937262/thumb-1280x720-37_msjqzl.png",
@@ -40,7 +44,6 @@ const IMAGES = {
     "https://res.cloudinary.com/pachi/image/upload/v1766937573/wallpapersden.com_hd-rpg-arknights-girls-cool-art_1920x1080_xxq9cf.jpg",
 };
 
-// Added Icons for the new banners based on item list
 const ICONS = {
   FEATURED: "✨",
   STANDARD: "🎫",
@@ -57,6 +60,14 @@ const THIN_LINE = "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯�
 
 async function banners(message) {
   const userId = message.author.id;
+
+  // ✅ 1. CHECK IF USER IS ALREADY PULLING
+  if (isUserPulling(userId)) {
+    return message.reply("⚠️ You already have a gacha menu open!");
+  }
+  // ✅ 2. SET USER STATE
+  setUserPulling(userId);
+
   const currentUser = await UserContainer.findOne({ userId });
   try {
     const getRatesText = () => {
@@ -98,7 +109,6 @@ async function banners(message) {
           value: `New Eridu City Fund.\n${THIN_LINE}`,
           inline: false,
         },
-        // --- NEW FIELDS ---
         {
           name: `${ICONS.GENSHIN} Genshin Impact`,
           value: `Call upon featured heroes of Teyvat.\n${THIN_LINE}`,
@@ -118,7 +128,6 @@ async function banners(message) {
       .setColor("DarkPurple")
       .setFooter({ text: "Select a banner below." });
 
-    // Row 1: Existing Banners
     const menuRow1 = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("view_featured")
@@ -142,7 +151,6 @@ async function banners(message) {
         .setStyle(ButtonStyle.Primary)
     );
 
-    // Row 2: New Banners
     const menuRow2 = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("view_genshin")
@@ -163,7 +171,7 @@ async function banners(message) {
 
     const msg = await message.reply({
       embeds: [menuEmbed],
-      components: [menuRow1, menuRow2], // Pass both rows
+      components: [menuRow1, menuRow2],
     });
 
     const collector = msg.createMessageComponentCollector({
@@ -202,7 +210,6 @@ async function banners(message) {
 
         const rates = getRatesText();
 
-        // PULL ACTIONS
         if (interaction.customId === "pull_1_specific") {
           await executeSpecificPull(interaction, "FEATURED", "✨", 1);
         } else if (interaction.customId === "pull_10_specific") {
@@ -219,9 +226,7 @@ async function banners(message) {
           await executeSinglePull(interaction, "ZZZ", ICONS.ZZZ);
         } else if (interaction.customId === "pull_10_zzz") {
           await executeTenPull(interaction, "ZZZ", ICONS.ZZZ);
-        }
-        // --- NEW PULL ACTIONS ---
-        else if (interaction.customId === "pull_1_genshin") {
+        } else if (interaction.customId === "pull_1_genshin") {
           await executeSinglePull(interaction, "GENSHIN", ICONS.GENSHIN);
         } else if (interaction.customId === "pull_10_genshin") {
           await executeTenPull(interaction, "GENSHIN", ICONS.GENSHIN);
@@ -233,12 +238,7 @@ async function banners(message) {
           await executeSinglePull(interaction, "ARKNIGHTS", ICONS.ARKNIGHTS);
         } else if (interaction.customId === "pull_10_arknights") {
           await executeTenPull(interaction, "ARKNIGHTS", ICONS.ARKNIGHTS);
-        }
-
-        // ==========================================
-        // 🖥️ VIEW: FEATURED BANNER
-        // ==========================================
-        else if (interaction.customId === "view_featured") {
+        } else if (interaction.customId === "view_featured") {
           const bannerState = await getFeaturedBanner();
           const charId = Number(bannerState.cardId);
           let featuredChar = await Index.findOne({ pokeId: charId });
@@ -310,12 +310,7 @@ async function banners(message) {
             components: [actionRow],
             files: [],
           });
-        }
-
-        // ==========================================
-        // 🖥️ VIEW: STANDARD BANNER
-        // ==========================================
-        else if (interaction.customId === "view_standard") {
+        } else if (interaction.customId === "view_standard") {
           const allCards = await Index.find({});
           const tickets = getAmount("ticket");
           const embed = new EmbedBuilder()
@@ -354,12 +349,7 @@ async function banners(message) {
             components: [actionRow],
             files: [],
           });
-        }
-
-        // ==========================================
-        // 🖥️ VIEW: WUWA BANNER
-        // ==========================================
-        else if (interaction.customId === "view_wuwa") {
+        } else if (interaction.customId === "view_wuwa") {
           const allCards = await Index.find({ franchise: "Wuthering Waves" });
           const tides = getAmount("tide");
           const embed = new EmbedBuilder()
@@ -394,12 +384,7 @@ async function banners(message) {
               .setStyle(ButtonStyle.Danger)
           );
           await interaction.editReply({ embeds: [embed], components: [row] });
-        }
-
-        // ==========================================
-        // 🖥️ VIEW: ZZZ BANNER
-        // ==========================================
-        else if (interaction.customId === "view_zzz") {
+        } else if (interaction.customId === "view_zzz") {
           const allCards = await Index.find({ franchise: "Zenless Zone Zero" });
           const tapes = getAmount("tape");
           const embed = new EmbedBuilder()
@@ -434,12 +419,7 @@ async function banners(message) {
               .setStyle(ButtonStyle.Danger)
           );
           await interaction.editReply({ embeds: [embed], components: [row] });
-        }
-
-        // ==========================================
-        // 🖥️ VIEW: GENSHIN BANNER
-        // ==========================================
-        else if (interaction.customId === "view_genshin") {
+        } else if (interaction.customId === "view_genshin") {
           const allCards = await Index.find({ franchise: "Genshin Impact" });
           const fates = getAmount("fate");
           const embed = new EmbedBuilder()
@@ -474,12 +454,7 @@ async function banners(message) {
               .setStyle(ButtonStyle.Danger)
           );
           await interaction.editReply({ embeds: [embed], components: [row] });
-        }
-
-        // ==========================================
-        // 🖥️ VIEW: HSR BANNER
-        // ==========================================
-        else if (interaction.customId === "view_hsr") {
+        } else if (interaction.customId === "view_hsr") {
           const allCards = await Index.find({ franchise: "Honkai Star Rail" });
           const passes = getAmount("pass");
           const embed = new EmbedBuilder()
@@ -514,12 +489,7 @@ async function banners(message) {
               .setStyle(ButtonStyle.Danger)
           );
           await interaction.editReply({ embeds: [embed], components: [row] });
-        }
-
-        // ==========================================
-        // 🖥️ VIEW: ARKNIGHTS BANNER
-        // ==========================================
-        else if (interaction.customId === "view_arknights") {
+        } else if (interaction.customId === "view_arknights") {
           const allCards = await Index.find({ franchise: "Arknights" });
           const permits = getAmount("permit");
           const embed = new EmbedBuilder()
@@ -569,10 +539,14 @@ async function banners(message) {
     });
 
     collector.on("end", () => {
+      // ✅ 3. REMOVE STATE ON CLOSE
+      removeUserPulling(userId);
       msg.edit({ components: [] }).catch(() => {});
     });
   } catch (error) {
     console.error("Banner Command Error:", error);
+    // ✅ 4. REMOVE STATE ON ERROR
+    removeUserPulling(userId);
     message.reply("Something went wrong loading the banners.");
   }
 }
