@@ -9,45 +9,37 @@ const RAID_DURATIONS = {
     6: 120 * 60 * 1000 
 };
 
-// ⚠️ FOR TESTING: Set this to 1 Minute instead of 40 Minutes
-// const LOBBY_DURATION = 40 * 60 * 1000; 
-const LOBBY_DURATION = 40 * 60 * 1000; // 1 Minute for testing
+const LOBBY_DURATION = 40 * 60 * 1000; 
+
+// Helper function to add a delay (prevents Discord Rate Limits)
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function startRaidSweeper(client) {
-    console.log("⏰ Raid Sweeper started (Debug Mode)...");
+    console.log("⏰ Raid Sweeper started (RAM Optimized)...");
 
     setInterval(async () => {
         try {
-            const allRaids = await Raids.find({});
+            // .lean() makes this MUCH lighter on Discloud's RAM
+            const allRaids = await Raids.find({}).lean(); 
             const now = Date.now();
-            
-            // Debug Log: Uncomment if you want to see this every minute
-            // console.log(`[Sweeper] Checking ${allRaids.length} active raids...`);
 
             for (const raid of allRaids) {
-                let timeLimit = LOBBY_DURATION;
-                if (raid.started) {
-                    timeLimit = RAID_DURATIONS[raid.rarity] || LOBBY_DURATION;
-                }
+                let timeLimit = raid.started 
+                    ? (RAID_DURATIONS[raid.rarity] || LOBBY_DURATION) 
+                    : LOBBY_DURATION;
 
                 const startTime = new Date(raid.createdAt).getTime();
                 const expiryTime = startTime + timeLimit;
-                const timeLeft = (expiryTime - now) / 1000;
-
-                // Log the status of each raid
-                // console.log(`[Raid #${raid.raidId}] Time Left: ${timeLeft.toFixed(1)}s`);
 
                 if (now >= expiryTime) {
                     console.log(`🗑️ EXPIRED: Raid #${raid.raidId}. Cleaning up...`);
 
                     for (const p of raid.participants) {
-                        // 1. Free User
-                        const user = await UserContainer.findOne({ userId: p.userId });
-                        if (user) {
-                            user.inRaid = null;
-                            await user.save();
-                            console.log(`   -> Freed user ${p.username}`);
-                        }
+                        // 1. Free User (Optimized update)
+                        await UserContainer.updateOne(
+                            { userId: p.userId },
+                            { $set: { inRaid: null } }
+                        );
 
                         // 2. Send DM
                         try {
@@ -60,10 +52,11 @@ async function startRaidSweeper(client) {
                                 await discordUser.send(
                                     `🛑 **Raid #${raid.raidId} has ended!**\nReason: ${reason}\nYou are now free to join other raids.`
                                 );
-                                console.log(`   -> DM sent to ${p.username}`);
+                                // Wait 500ms between DMs to avoid being flagged as spam
+                                await wait(500); 
                             }
                         } catch (err) {
-                            console.log(`   -> ❌ Could not DM ${p.username} (Closed DMs?)`);
+                            console.log(`   -> ❌ Could not DM ${p.userId}`);
                         }
                     }
 
@@ -75,7 +68,7 @@ async function startRaidSweeper(client) {
         } catch (err) {
             console.error("Raid Sweeper Error:", err);
         }
-    }, 60000); // Checks every 60 seconds
+    }, 60000); 
 }
 
 module.exports = { startRaidSweeper };

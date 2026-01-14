@@ -1,5 +1,6 @@
 // index.js
 require("dotenv").config();
+const express = require("express"); // Added for Uptime
 const token = process.env.DISCORD_TOKEN;
 const {
   connectDB,
@@ -71,6 +72,19 @@ const {
   raidEntries,
 } = require("./raid/raidLobby");
 const { startRaidBattle } = require("./raid/raidBattle");
+// https://3gacha-rip-off-6.discloud.app
+// --- UPTIME SERVER SETUP ---
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+app.get('/', (req, res) => {
+  res.send('Bot is online and Sweeper is running! 🚀');
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server đang chạy tại port ${PORT}`);
+});
+// --- END UPTIME SERVER SETUP ---
 
 if (!token) {
   console.error(
